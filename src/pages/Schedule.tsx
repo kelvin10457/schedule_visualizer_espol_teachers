@@ -82,15 +82,7 @@ function timeToMinutes(t: string): number {
 }
 
 
-const DAY_ORDER: Record<string, number> = {
-    LUNES: 0,
-    MARTES: 1,
-    "MIÉRCOLES": 2,
-    JUEVES: 3,
-    VIERNES: 4,
-    SÁBADO: 5,
-    DOMINGO: 6,
-};
+
 
 const DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 const DAY_KEYS = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
@@ -508,7 +500,7 @@ export default function Schedule() {
                         </div>
 
                         {/* Day columns */}
-                        {DAY_KEYS.map((dayKey, colIdx) => {
+                        {DAY_KEYS.map((dayKey, _colIdx) => {
                             const daySubjects = byDay[dayKey] ?? [];
 
                             return (
