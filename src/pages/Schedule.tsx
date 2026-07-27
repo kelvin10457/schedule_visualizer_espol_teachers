@@ -533,154 +533,219 @@ export default function Schedule() {
                                         />
                                     ))}
 
-                                    {/* Class blocks */}
-                                    {daySubjects.map((s, sIdx) => {
-                                        const startMin = timeToMinutes(s.hora_inicio);
-                                        const endMin = timeToMinutes(s.hora_fin);
+                                    {/* Class blocks — side-by-side columns for any overlapping intervals */}
+                                    {(() => {
+                                        // ── Overlap layout algorithm ──────────────────────────────
+                                        // For each subject compute its pixel interval [top, top+h).
+                                        // Then assign columns so no two overlapping subjects share a column.
+                                        // Finally, find the maximum number of columns each subject must
+                                        // share (its "group width") to know how wide to draw it.
 
-                                        if (startMin < GRID_START || endMin > GRID_END) return null;
+                                        type Layout = { col: number; totalCols: number };
+                                        const n = daySubjects.length;
+                                        const layouts: Layout[] = new Array(n).fill(null).map(() => ({ col: 0, totalCols: 1 }));
 
-                                        const top = minutesToSlotIndex(startMin) * 30;
-                                        const height = ((endMin - startMin) / SLOT_MINUTES) * 30;
+                                        if (n > 0) {
+                                            // Build adjacency: subjects i and j overlap if their time intervals intersect
+                                            const overlaps = (a: Subject, b: Subject) => {
+                                                const aStart = timeToMinutes(a.hora_inicio);
+                                                const aEnd = timeToMinutes(a.hora_fin);
+                                                const bStart = timeToMinutes(b.hora_inicio);
+                                                const bEnd = timeToMinutes(b.hora_fin);
+                                                return aStart < bEnd && bStart < aEnd;
+                                            };
 
-                                        const colorIdx = professorColorMap[s.profesor] ?? 0;
-                                        const color = PROFESSOR_COLORS[colorIdx];
-                                        const isTEORIA = s.tipo === "TEORIA";
-                                        // Biweekly indicator
-                                        const pq = s.planificada_quincenalmente?.trim().toUpperCase() ?? "";
-                                        const quincena = pq === "1 QUINCENA" ? 1 : pq === "2 QUINCENA" ? 2 : null;
+                                            // Assign column greedily (sorted by start time)
+                                            const order = Array.from({ length: n }, (_, i) => i)
+                                                .sort((a, b) => timeToMinutes(daySubjects[a].hora_inicio) - timeToMinutes(daySubjects[b].hora_inicio));
 
-                                        return (
-                                            <div
-                                                key={`${s.codigo_materia}-${s.tipo}-${s.paralelo}-${s.dia}-${sIdx}`}
-                                                id={`class-${s.codigo_materia}-${dayKey}-${sIdx}`}
-                                                onMouseMove={(e) => handleCellHover(e, s)}
-                                                onMouseLeave={(e) => {
-                                                    handleCellLeave();
-                                                    const el = e.currentTarget as HTMLElement;
-                                                    el.style.transform = "";
-                                                    el.style.zIndex = "10";
-                                                    el.style.boxShadow = `0 2px 12px ${color.border}40`;
-                                                }}
-                                                style={{
-                                                    position: "absolute",
-                                                    top: top + 2,
-                                                    left: 4,
-                                                    right: 4,
-                                                    height: Math.max(height - 4, 18),
-                                                    background: color.bg,
-                                                    border: `1.5px solid ${color.border}`,
-                                                    borderRadius: 6,
-                                                    padding: "4px 6px",
-                                                    cursor: "pointer",
-                                                    overflow: "hidden",
-                                                    backdropFilter: "blur(4px)",
-                                                    boxShadow: `0 2px 12px ${color.border}40`,
-                                                    transition: "transform 0.15s, box-shadow 0.15s",
-                                                    zIndex: 10,
-                                                }}
-                                                onMouseEnter={(e) => {
-                                                    const el = e.currentTarget as HTMLElement;
-                                                    el.style.transform = "scale(1.02)";
-                                                    el.style.zIndex = "20";
-                                                    el.style.boxShadow = `0 6px 20px ${color.border}80`;
-                                                }}
-                                            >
-                                                {/* Type + quincena badge */}
+                                            const colOf: number[] = new Array(n).fill(-1);
+                                            for (const i of order) {
+                                                const usedCols = new Set<number>();
+                                                for (let j = 0; j < n; j++) {
+                                                    if (colOf[j] >= 0 && overlaps(daySubjects[i], daySubjects[j])) {
+                                                        usedCols.add(colOf[j]);
+                                                    }
+                                                }
+                                                let col = 0;
+                                                while (usedCols.has(col)) col++;
+                                                colOf[i] = col;
+                                            }
+
+                                            // For each subject, compute the maximum column in its overlap group
+                                            // (i.e. the total number of columns needed for the widest group it's in)
+                                            const maxColOf: number[] = colOf.slice();
+                                            for (let i = 0; i < n; i++) {
+                                                for (let j = 0; j < n; j++) {
+                                                    if (i !== j && overlaps(daySubjects[i], daySubjects[j])) {
+                                                        maxColOf[i] = Math.max(maxColOf[i], colOf[j]);
+                                                    }
+                                                }
+                                            }
+
+                                            for (let i = 0; i < n; i++) {
+                                                layouts[i] = { col: colOf[i], totalCols: maxColOf[i] + 1 };
+                                            }
+                                        }
+
+                                        return daySubjects.map((s, sIdx) => {
+                                            const startMin = timeToMinutes(s.hora_inicio);
+                                            const endMin = timeToMinutes(s.hora_fin);
+
+                                            if (startMin < GRID_START || endMin > GRID_END) return null;
+
+                                            const top = minutesToSlotIndex(startMin) * 30;
+                                            const height = ((endMin - startMin) / SLOT_MINUTES) * 30;
+                                            const h = Math.max(height - 4, 18);
+
+                                            const colorIdx = professorColorMap[s.profesor] ?? 0;
+                                            const color = PROFESSOR_COLORS[colorIdx];
+                                            const isTEORIA = s.tipo === "TEORIA";
+                                            const pq = s.planificada_quincenalmente?.trim().toUpperCase() ?? "";
+                                            const quincena = pq === "1 QUINCENA" ? 1 : pq === "2 QUINCENA" ? 2 : null;
+
+                                            const { col, totalCols } = layouts[sIdx];
+
+                                            // Compute left/right as percentages inside the 4px-padded column area
+                                            const pad = 4;
+                                            const leftOffset = `calc(${pad}px + (100% - ${pad * 2}px) / ${totalCols} * ${col})`;
+                                            const rightOffset = `calc(100% - ${pad}px - (100% - ${pad * 2}px) / ${totalCols} * ${col + 1})`;
+
+                                            return (
                                                 <div
+                                                    key={`${s.codigo_materia}-${s.tipo}-${s.paralelo}-${s.dia}-${sIdx}`}
+                                                    id={`class-${s.codigo_materia}-${dayKey}-${sIdx}`}
+                                                    onMouseMove={(e) => handleCellHover(e, s)}
+                                                    onMouseLeave={(e) => {
+                                                        handleCellLeave();
+                                                        const el = e.currentTarget as HTMLElement;
+                                                        el.style.transform = "";
+                                                        el.style.zIndex = String(10 + col);
+                                                        el.style.boxShadow = `0 2px 12px ${color.border}40`;
+                                                    }}
                                                     style={{
                                                         position: "absolute",
-                                                        top: 4,
-                                                        right: 4,
-                                                        background: isTEORIA
-                                                            ? "rgba(255,255,255,0.25)"
-                                                            : quincena
-                                                                ? quincena === 1
-                                                                    ? "rgba(245,158,11,0.55)"
-                                                                    : "rgba(168,85,247,0.55)"
-                                                                : "rgba(0,0,0,0.25)",
-                                                        borderRadius: 3,
-                                                        padding: "1px 4px",
-                                                        fontSize: 8,
-                                                        fontWeight: 700,
-                                                        letterSpacing: "0.4px",
-                                                        color: "#fff",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: 2,
-                                                        whiteSpace: "nowrap",
+                                                        top: top + 2,
+                                                        left: leftOffset,
+                                                        right: rightOffset,
+                                                        // Slight inner gap between side-by-side cards
+                                                        marginLeft: col > 0 ? 2 : 0,
+                                                        marginRight: col < totalCols - 1 ? 2 : 0,
+                                                        height: h,
+                                                        background: color.bg,
+                                                        border: `1.5px solid ${color.border}`,
+                                                        borderRadius: 6,
+                                                        padding: "4px 6px",
+                                                        cursor: "pointer",
+                                                        overflow: "hidden",
+                                                        backdropFilter: "blur(4px)",
+                                                        boxShadow: `0 2px 12px ${color.border}40`,
+                                                        transition: "transform 0.15s, box-shadow 0.15s",
+                                                        zIndex: 10 + col,
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        const el = e.currentTarget as HTMLElement;
+                                                        el.style.transform = "scale(1.02)";
+                                                        el.style.zIndex = "25";
+                                                        el.style.boxShadow = `0 6px 20px ${color.border}80`;
                                                     }}
                                                 >
-                                                    {isTEORIA
-                                                        ? "TEO"
-                                                        : quincena
-                                                            ? `PRA · Q${quincena}`
-                                                            : "PRA"}
-                                                </div>
-
-                                                {/* Diagonal stripe overlay for quincena classes */}
-                                                {!isTEORIA && quincena && (
+                                                    {/* Type + quincena badge */}
                                                     <div
                                                         style={{
                                                             position: "absolute",
-                                                            inset: 0,
-                                                            borderRadius: 5,
-                                                            backgroundImage:
-                                                                quincena === 1
-                                                                    ? "repeating-linear-gradient(45deg, rgba(245,158,11,0.12) 0px, rgba(245,158,11,0.12) 2px, transparent 2px, transparent 8px)"
-                                                                    : "repeating-linear-gradient(45deg, rgba(168,85,247,0.12) 0px, rgba(168,85,247,0.12) 2px, transparent 2px, transparent 8px)",
-                                                            pointerEvents: "none",
-                                                        }}
-                                                    />
-                                                )}
-
-                                                <div
-                                                    style={{
-                                                        fontSize: 10,
-                                                        fontWeight: 700,
-                                                        color: "#fff",
-                                                        lineHeight: 1.2,
-                                                        overflow: "hidden",
-                                                        textOverflow: "ellipsis",
-                                                        whiteSpace: "nowrap",
-                                                        paddingRight: 28,
-                                                    }}
-                                                >
-                                                    {s.codigo_materia}
-                                                </div>
-                                                {height >= 36 && (
-                                                    <div
-                                                        style={{
-                                                            fontSize: 9,
-                                                            color: "rgba(255,255,255,0.85)",
-                                                            overflow: "hidden",
-                                                            textOverflow: "ellipsis",
-                                                            display: "-webkit-box",
-                                                            WebkitLineClamp: 2,
-                                                            WebkitBoxOrient: "vertical",
-                                                            lineHeight: 1.3,
-                                                        }}
-                                                    >
-                                                        {s.materia}
-                                                    </div>
-                                                )}
-                                                {height >= 52 && (
-                                                    <div
-                                                        style={{
+                                                            top: 4,
+                                                            right: 4,
+                                                            background: isTEORIA
+                                                                ? "rgba(255,255,255,0.25)"
+                                                                : quincena
+                                                                    ? quincena === 1
+                                                                        ? "rgba(245,158,11,0.55)"
+                                                                        : "rgba(168,85,247,0.55)"
+                                                                    : "rgba(0,0,0,0.25)",
+                                                            borderRadius: 3,
+                                                            padding: "1px 4px",
                                                             fontSize: 8,
-                                                            color: "rgba(255,255,255,0.65)",
-                                                            marginTop: 2,
-                                                            overflow: "hidden",
-                                                            textOverflow: "ellipsis",
+                                                            fontWeight: 700,
+                                                            letterSpacing: "0.4px",
+                                                            color: "#fff",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 2,
                                                             whiteSpace: "nowrap",
                                                         }}
                                                     >
-                                                        🏫 {s.aula}
+                                                        {isTEORIA
+                                                            ? "TEO"
+                                                            : quincena
+                                                                ? `PRA · Q${quincena}`
+                                                                : "PRA"}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+
+                                                    {/* Diagonal stripe for quincena */}
+                                                    {!isTEORIA && quincena && (
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                inset: 0,
+                                                                borderRadius: 5,
+                                                                backgroundImage:
+                                                                    quincena === 1
+                                                                        ? "repeating-linear-gradient(45deg, rgba(245,158,11,0.12) 0px, rgba(245,158,11,0.12) 2px, transparent 2px, transparent 8px)"
+                                                                        : "repeating-linear-gradient(45deg, rgba(168,85,247,0.12) 0px, rgba(168,85,247,0.12) 2px, transparent 2px, transparent 8px)",
+                                                                pointerEvents: "none",
+                                                            }}
+                                                        />
+                                                    )}
+
+                                                    <div
+                                                        style={{
+                                                            fontSize: 10,
+                                                            fontWeight: 700,
+                                                            color: "#fff",
+                                                            lineHeight: 1.2,
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            whiteSpace: "nowrap",
+                                                            paddingRight: totalCols === 1 ? 28 : 4,
+                                                        }}
+                                                    >
+                                                        {s.codigo_materia}
+                                                    </div>
+                                                    {height >= 36 && (
+                                                        <div
+                                                            style={{
+                                                                fontSize: 9,
+                                                                color: "rgba(255,255,255,0.85)",
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                display: "-webkit-box",
+                                                                WebkitLineClamp: 2,
+                                                                WebkitBoxOrient: "vertical",
+                                                                lineHeight: 1.3,
+                                                            }}
+                                                        >
+                                                            {s.materia}
+                                                        </div>
+                                                    )}
+                                                    {height >= 52 && (
+                                                        <div
+                                                            style={{
+                                                                fontSize: 8,
+                                                                color: "rgba(255,255,255,0.65)",
+                                                                marginTop: 2,
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                whiteSpace: "nowrap",
+                                                            }}
+                                                        >
+                                                            🏫 {s.aula}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             );
                         })}
@@ -787,6 +852,7 @@ export default function Schedule() {
                                 ["Aula", `${tooltip.subject.aula} · ${tooltip.subject.bloque}`],
                                 ["Cupo", `${tooltip.subject.cupo_disponible} / ${tooltip.subject.cupo_maximo}`],
                                 ["Nivel", tooltip.subject.nivel],
+                                ...(() => { const pq = tooltip.subject.planificada_quincenalmente?.trim().toUpperCase() ?? ""; return pq === "1 QUINCENA" || pq === "2 QUINCENA" ? [["Quincena", pq === "1 QUINCENA" ? "1ª Quincena" : "2ª Quincena"]] : []; })(),
                             ].map(([label, val]) => (
                                 <tr key={String(label)}>
                                     <td style={{ color: "rgba(255,255,255,0.4)", paddingRight: 8, whiteSpace: "nowrap" }}>
