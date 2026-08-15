@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ESPOL Horarios · Extractor y Visualizador",
+  "version": "1.0.0",
+  "description": "Extrae los horarios planificados de ESPOL desde tu sesión ya iniciada y los muestra en un calendario visual, sin depender de ningún servidor externo.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ESPOL Horarios",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "unlimitedStorage", "downloads", "tabs"],
+  "host_permissions": ["https://www.academico.espol.edu.ec/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.academico.espol.edu.ec/UI/Registros/*"],
+      "js": [
+        "lib/malla-curricular.js",
+        "lib/clean.js",
+        "content-script.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

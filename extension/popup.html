@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ESPOL Horarios</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        width: 360px;
+        font-family: 'Segoe UI', 'Inter', sans-serif;
+        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+        color: #e2e8f0;
+      }
+      .wrap { padding: 18px 18px 16px; }
+      h1 {
+        font-size: 15px;
+        margin: 0 0 2px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .subtitle { font-size: 11px; color: rgba(255,255,255,0.5); margin: 0 0 14px; }
+      .notice {
+        background: rgba(239,68,68,0.12);
+        border: 1px solid rgba(239,68,68,0.4);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 12px;
+        margin-bottom: 12px;
+        line-height: 1.4;
+      }
+      .notice button {
+        margin-top: 8px;
+        width: 100%;
+      }
+      label {
+        display: block;
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+        margin: 10px 0 4px;
+      }
+      input[type="number"], select, textarea {
+        width: 100%;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        color: #e2e8f0;
+        padding: 7px 10px;
+        font-size: 13px;
+        font-family: inherit;
+      }
+      textarea { resize: vertical; min-height: 64px; line-height: 1.4; }
+      .row { display: flex; gap: 8px; }
+      .row > div { flex: 1; }
+      .hint { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; line-height: 1.4; }
+      button {
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 9px 0;
+      }
+      .btn-primary {
+        width: 100%;
+        margin-top: 14px;
+        background: linear-gradient(135deg, #6366f1, #ec4899);
+        color: #fff;
+      }
+      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-secondary {
+        width: 100%;
+        margin-top: 8px;
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.2);
+        color: #e2e8f0;
+      }
+      .status {
+        margin-top: 14px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding-top: 10px;
+      }
+      .status-title { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 6px; display:flex; justify-content:space-between; }
+      .log {
+        max-height: 130px;
+        overflow-y: auto;
+        background: rgba(0,0,0,0.25);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 11px;
+        line-height: 1.5;
+        color: rgba(255,255,255,0.75);
+      }
+      .log div:last-child { color: #fff; font-weight: 600; }
+      .links { display: flex; gap: 8px; margin-top: 8px; }
+      .links button { flex: 1; }
+      a.linklike { color: #a5b4fc; text-decoration: underline; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>📅 ESPOL Horarios</h1>
+      <p class="subtitle">Extrae y visualiza horarios sin salir del navegador</p>
+
+      <div id="notice" class="notice" style="display:none"></div>
+
+      <form id="scrape-form">
+        <div class="row">
+          <div>
+            <label for="year">Año</label>
+            <input type="number" id="year" min="2000" max="2100" />
+          </div>
+          <div>
+            <label for="term">Término</label>
+            <select id="term">
+              <option value="1">PAO I</option>
+              <option value="2">PAO II</option>
+              <option value="0">Vacacional</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="codes">Materias a extraer</label>
+        <textarea id="codes" placeholder="ELEG 1028-1052&#10;EYAG 1044&#10;MATG 1032"></textarea>
+        <p class="hint">
+          Una por línea. "PREFIJO INICIO-FIN" para un rango, o "PREFIJO NUMERO" para una
+          materia puntual. Puedes combinar varias líneas con distintos prefijos.
+        </p>
+
+        <button type="submit" class="btn-primary" id="btn-start">Iniciar extracción</button>
+      </form>
+
+      <div class="links">
+        <button class="btn-secondary" id="btn-view">Ver último horario</button>
+        <button class="btn-secondary" id="btn-config">Configurar niveles</button>
+      </div>
+
+      <div class="status" id="status" style="display:none">
+        <div class="status-title"><span id="status-label">Estado</span><span id="status-count"></span></div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

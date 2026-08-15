@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@keyframes row-added-highlight {
+  0% {
+    background-color: rgba(99, 102, 241, 0.4);
+    transform: scale(1.015);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.row-added {
+  animation: row-added-highlight 900ms ease-out;
+  border-radius: 8px;
+}

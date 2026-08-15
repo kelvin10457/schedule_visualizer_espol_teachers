@@ -1,6 +1,11 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Subject from "../models/Subject";
+import { getStorageItem, setStorageItem } from "../lib/storage";
+import SearchableSelect from "../components/SearchableSelect";
+import { timeToMinutes } from "../lib/time";
+import { CURRENT_SUBJECTS_KEY, SCRAPED_SUBJECTS_KEY } from "../lib/constants";
+import { findProfessorConflicts } from "../lib/conflicts";
 
 interface LocationState {
     file: File;
@@ -76,14 +81,6 @@ function parseCSV(text: string): Subject[] {
     return rows;
 }
 
-function timeToMinutes(t: string): number {
-    const [h, m] = t.split(":").map(Number);
-    return (h || 0) * 60 + (m || 0);
-}
-
-
-
-
 const DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
 const DAY_KEYS = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
 
@@ -128,23 +125,45 @@ export default function Schedule() {
     const file = state?.file;
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
+    const [source, setSource] = useState<"extension" | "file" | null>(null);
     const [filterProfesor, setFilterProfesor] = useState<string>("ALL");
     const [filterNivel, setFilterNivel] = useState<string>("ALL");
     const [filterTipo, setFilterTipo] = useState<string>("ALL");
     const [tooltip, setTooltip] = useState<TooltipInfo | null>(null);
 
     useEffect(() => {
-        if (!file) {
-            navigate("/");
-            return;
-        }
+        let cancelled = false;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target?.result as string;
-            setSubjects(parseCSV(text));
+        // Si la extensión acaba de extraer datos, ya están listos en storage — no
+        // dependemos de ningún archivo ni servidor.
+        getStorageItem<Subject[] | null>(SCRAPED_SUBJECTS_KEY, null).then((stored) => {
+            if (cancelled) return;
+            if (stored && stored.length > 0) {
+                setSubjects(stored);
+                setSource("extension");
+                setStorageItem(CURRENT_SUBJECTS_KEY, stored);
+                return;
+            }
+
+            if (!file) {
+                navigate("/");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target?.result as string;
+                const parsed = parseCSV(text);
+                setSubjects(parsed);
+                setSource("file");
+                setStorageItem(CURRENT_SUBJECTS_KEY, parsed);
+            };
+            reader.readAsText(file, "UTF-8");
+        });
+
+        return () => {
+            cancelled = true;
         };
-        reader.readAsText(file, "UTF-8");
     }, []);
 
     // Unique professors sorted alphabetically
@@ -180,6 +199,19 @@ export default function Schedule() {
             return matchProfesor && matchNivel && matchTipo;
         });
     }, [subjects, filterProfesor, filterNivel, filterTipo]);
+
+    // Filas involucradas en un cruce de horario del mismo profesor (sobre TODAS las
+    // materias, sin importar los filtros activos, para que el chequeo sea completo).
+    const conflictedRows = useMemo(() => {
+        const set = new Set<Subject>();
+        for (const group of findProfessorConflicts(subjects)) {
+            for (const pair of group.conflicts) {
+                set.add(pair.a.meeting.row);
+                set.add(pair.b.meeting.row);
+            }
+        }
+        return set;
+    }, [subjects]);
 
     // Group subjects by day
     const byDay = useMemo(() => {
@@ -259,7 +291,7 @@ export default function Schedule() {
                             Visualizador de Horarios
                         </h1>
                         <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                            ESPOL · {file?.name}
+                            ESPOL · {source === "extension" ? "extraído automáticamente" : file?.name}
                         </p>
                     </div>
                 </div>
@@ -267,73 +299,73 @@ export default function Schedule() {
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                     {/* Tipo filter */}
                     <label style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Tipo:</label>
-                    <select
-                        id="filter-tipo"
+                    <SearchableSelect
+                        options={["TEORIA", "PRACTICO"]}
                         value={filterTipo}
-                        onChange={(e) => setFilterTipo(e.target.value)}
-                        style={{
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            borderRadius: 8,
-                            color: "#e2e8f0",
-                            padding: "6px 12px",
-                            fontSize: 13,
-                            cursor: "pointer",
-                            maxWidth: 140,
-                        }}
-                    >
-                        <option value="ALL" style={{ background: "#302b63" }}>Todos los tipos</option>
-                        <option value="TEORIA" style={{ background: "#302b63" }}>Teoría</option>
-                        <option value="PRACTICO" style={{ background: "#302b63" }}>Práctico</option>
-                    </select>
+                        onChange={setFilterTipo}
+                        allLabel="Todos los tipos"
+                        width={140}
+                    />
 
                     {/* Nivel filter */}
                     <label style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Nivel:</label>
-                    <select
-                        id="filter-nivel"
+                    <SearchableSelect
+                        options={niveles.filter((n) => n !== "ALL")}
                         value={filterNivel}
-                        onChange={(e) => setFilterNivel(e.target.value)}
-                        style={{
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            borderRadius: 8,
-                            color: "#e2e8f0",
-                            padding: "6px 12px",
-                            fontSize: 13,
-                            cursor: "pointer",
-                            maxWidth: 200,
-                        }}
-                    >
-                        {niveles.map((n) => (
-                            <option key={n} value={n} style={{ background: "#302b63" }}>
-                                {n === "ALL" ? "Todos los niveles" : n}
-                            </option>
-                        ))}
-                    </select>
+                        onChange={setFilterNivel}
+                        allLabel="Todos los niveles"
+                        width={200}
+                    />
 
                     {/* Professor filter */}
                     <label style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>Profesor:</label>
-                    <select
-                        id="filter-profesor"
+                    <SearchableSelect
+                        options={professors.filter((p) => p !== "ALL")}
                         value={filterProfesor}
-                        onChange={(e) => setFilterProfesor(e.target.value)}
+                        onChange={setFilterProfesor}
+                        allLabel="Todos los profesores"
+                        width={280}
+                    />
+
+                    <button
+                        id="btn-config"
+                        onClick={() => navigate("/config")}
                         style={{
-                            background: "rgba(255,255,255,0.08)",
+                            background: "rgba(255,255,255,0.1)",
                             border: "1px solid rgba(255,255,255,0.2)",
                             borderRadius: 8,
                             color: "#e2e8f0",
-                            padding: "6px 12px",
+                            padding: "6px 16px",
                             fontSize: 13,
                             cursor: "pointer",
-                            maxWidth: 280,
+                            transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) =>
+                            ((e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.18)")
+                        }
+                        onMouseLeave={(e) =>
+                            ((e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)")
+                        }
+                    >
+                        ⚙️ Niveles
+                    </button>
+
+                    <button
+                        id="btn-conflicts"
+                        onClick={() => navigate("/conflicts")}
+                        style={{
+                            background: conflictedRows.size > 0 ? "rgba(239,68,68,0.18)" : "rgba(255,255,255,0.1)",
+                            border: conflictedRows.size > 0 ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: 8,
+                            color: "#e2e8f0",
+                            padding: "6px 16px",
+                            fontSize: 13,
+                            cursor: "pointer",
+                            transition: "background 0.2s",
                         }}
                     >
-                        {professors.map((p) => (
-                            <option key={p} value={p} style={{ background: "#302b63" }}>
-                                {p === "ALL" ? "Todos los profesores" : p}
-                            </option>
-                        ))}
-                    </select>
+                        🔀 Cruces{conflictedRows.size > 0 ? ` (${conflictedRows.size})` : ""}
+                    </button>
 
                     <button
                         id="btn-back"
@@ -603,6 +635,10 @@ export default function Schedule() {
                                             const isTEORIA = s.tipo === "TEORIA";
                                             const pq = s.planificada_quincenalmente?.trim().toUpperCase() ?? "";
                                             const quincena = pq === "1 QUINCENA" ? 1 : pq === "2 QUINCENA" ? 2 : null;
+                                            const isConflicted = filterProfesor !== "ALL" && conflictedRows.has(s);
+                                            const restingShadow = isConflicted
+                                                ? "0 0 0 2px rgba(239,68,68,0.5), 0 2px 12px rgba(239,68,68,0.5)"
+                                                : `0 2px 12px ${color.border}40`;
 
                                             const { col, totalCols } = layouts[sIdx];
 
@@ -621,7 +657,7 @@ export default function Schedule() {
                                                         const el = e.currentTarget as HTMLElement;
                                                         el.style.transform = "";
                                                         el.style.zIndex = String(10 + col);
-                                                        el.style.boxShadow = `0 2px 12px ${color.border}40`;
+                                                        el.style.boxShadow = restingShadow;
                                                     }}
                                                     style={{
                                                         position: "absolute",
@@ -633,13 +669,13 @@ export default function Schedule() {
                                                         marginRight: col < totalCols - 1 ? 2 : 0,
                                                         height: h,
                                                         background: color.bg,
-                                                        border: `1.5px solid ${color.border}`,
+                                                        border: isConflicted ? "1.5px solid #ef4444" : `1.5px solid ${color.border}`,
                                                         borderRadius: 6,
                                                         padding: "4px 6px",
                                                         cursor: "pointer",
                                                         overflow: "hidden",
                                                         backdropFilter: "blur(4px)",
-                                                        boxShadow: `0 2px 12px ${color.border}40`,
+                                                        boxShadow: restingShadow,
                                                         transition: "transform 0.15s, box-shadow 0.15s",
                                                         zIndex: 10 + col,
                                                     }}
@@ -710,6 +746,7 @@ export default function Schedule() {
                                                             paddingRight: totalCols === 1 ? 28 : 4,
                                                         }}
                                                     >
+                                                        {isConflicted ? "⚠ " : ""}
                                                         {s.codigo_materia}
                                                     </div>
                                                     {height >= 36 && (

@@ -1,5 +1,5 @@
 import { useState, useRef, type ChangeEvent, type DragEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function UploadFile() {
     const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -253,6 +253,17 @@ export default function UploadFile() {
                 >
                     Solo se aceptan archivos .csv generados por el sistema de ESPOL
                 </p>
+
+                <Link
+                    to="/config"
+                    style={{
+                        fontSize: 11,
+                        color: "rgba(165,180,252,0.8)",
+                        textDecoration: "underline",
+                    }}
+                >
+                    ⚙️ Configurar niveles de la malla curricular
+                </Link>
             </div>
         </div>
     );
