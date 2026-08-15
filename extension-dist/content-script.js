@@ -528,7 +528,12 @@
       visited: [],
     };
     await saveJob(job);
-    await safeBoot();
+
+    // Sin await a propósito: procesar la primera materia cruza la recarga de página
+    // que dispara "Buscar", y esperarla aquí rompería el canal de respuesta del
+    // mensaje antes de poder contestarle al popup. El trabajo ya quedó guardado, así
+    // que safeBoot() puede seguir solo de fondo mientras respondemos de una vez.
+    safeBoot();
     return { ok: true };
   }
 
