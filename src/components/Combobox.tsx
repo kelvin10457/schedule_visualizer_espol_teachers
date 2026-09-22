@@ -140,16 +140,8 @@ export default function Combobox({
                 }}
                 onFocus={() => setOpen(true)}
                 onKeyDown={handleKeyDown}
-                style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.08)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: 8,
-                    color: "#e2e8f0",
-                    padding: pinnedOption ? "6px 26px 6px 12px" : "6px 10px",
-                    fontSize: 13,
-                    boxSizing: "border-box",
-                }}
+                className="input"
+                style={pinnedOption ? { paddingRight: 26 } : undefined}
             />
             {pinnedOption && !isPinnedValue && (
                 <button
@@ -165,10 +157,11 @@ export default function Combobox({
                         transform: "translateY(-50%)",
                         background: "none",
                         border: "none",
-                        color: "rgba(255,255,255,0.5)",
+                        color: "var(--text-3)",
                         cursor: "pointer",
                         fontSize: 12,
-                        padding: 2,
+                        lineHeight: 1,
+                        padding: 4,
                     }}
                 >
                     ✕
@@ -181,13 +174,14 @@ export default function Combobox({
                         top: "calc(100% + 4px)",
                         left: 0,
                         right: 0,
-                        background: "#1e1b3a",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        borderRadius: 8,
-                        maxHeight: 220,
+                        background: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: 6,
+                        padding: 4,
+                        maxHeight: 240,
                         overflowY: "auto",
                         zIndex: 100,
-                        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+                        boxShadow: "var(--shadow-pop)",
                     }}
                 >
                     {pinnedOption && (
@@ -197,18 +191,22 @@ export default function Combobox({
                                 selectOption(pinnedOption.value);
                             }}
                             style={{
-                                padding: "7px 12px",
+                                padding: "6px 8px",
+                                borderRadius: 4,
                                 fontSize: 13,
                                 cursor: "pointer",
-                                color: isPinnedValue ? "#fff" : "rgba(255,255,255,0.6)",
-                                background: isPinnedValue ? "rgba(99,102,241,0.25)" : "transparent",
+                                color: "var(--text-2)",
+                                fontWeight: isPinnedValue ? 600 : 400,
+                                background: isPinnedValue ? "var(--accent-soft)" : "transparent",
+                                borderBottom: "1px solid var(--border)",
+                                marginBottom: 2,
                             }}
                         >
                             {pinnedOption.label}
                         </div>
                     )}
                     {filtered.length === 0 && (
-                        <div style={{ padding: "7px 12px", fontSize: 12, color: "rgba(255,255,255,0.35)" }}>
+                        <div style={{ padding: "6px 8px", fontSize: 12, color: "var(--text-3)" }}>
                             {allowCustom ? "Escribe para crear un nivel nuevo" : "Sin resultados"}
                         </div>
                     )}
@@ -221,15 +219,17 @@ export default function Combobox({
                             }}
                             onMouseEnter={() => setHighlight(i)}
                             style={{
-                                padding: "7px 12px",
+                                padding: "6px 8px",
+                                borderRadius: 4,
                                 fontSize: 13,
                                 cursor: "pointer",
-                                color: "#e2e8f0",
+                                color: "var(--text)",
+                                fontWeight: opt === value ? 600 : 400,
                                 background:
                                     i === highlight
-                                        ? "rgba(99,102,241,0.3)"
+                                        ? "rgba(0,0,0,0.05)"
                                         : opt === value
-                                            ? "rgba(99,102,241,0.15)"
+                                            ? "var(--accent-soft)"
                                             : "transparent",
                             }}
                         >

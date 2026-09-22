@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Subject from "../models/Subject";
 import { tooltipPosition } from "../lib/tooltip";
+import { badgeStyle, CONFLICT_COLOR, quincenaHatch, type BlockColor } from "../lib/palette";
 
 export interface WeekBlock {
     id: string;
@@ -9,7 +10,7 @@ export interface WeekBlock {
     endMin: number;
     title: string;
     subtitle?: string;
-    color: { bg: string; border: string };
+    color: BlockColor;
     conflicted?: boolean;
     // Fila original — se usa para el tooltip detallado y el badge de tipo/quincena,
     // igual que en el horario principal (Schedule.tsx).
@@ -26,9 +27,9 @@ export interface FreeBlockInput {
 }
 
 const FREE_KIND_STYLE: Record<FreeKind, { bg: string; border: string; label: string }> = {
-    TODAS: { bg: "rgba(16,185,129,0.10)", border: "rgba(16,185,129,0.4)", label: "Libre todas las semanas" },
-    "1": { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.45)", label: "Libre en 1ª quincena" },
-    "2": { bg: "rgba(168,85,247,0.12)", border: "rgba(168,85,247,0.45)", label: "Libre en 2ª quincena" },
+    TODAS: { bg: "rgba(30,122,76,0.08)", border: "rgba(30,122,76,0.45)", label: "Libre todas las semanas" },
+    "1": { bg: "rgba(154,101,18,0.09)", border: "rgba(154,101,18,0.45)", label: "Libre en 1ª quincena" },
+    "2": { bg: "rgba(101,71,154,0.09)", border: "rgba(101,71,154,0.45)", label: "Libre en 2ª quincena" },
 };
 
 function fmtTime(m: number): string {
@@ -56,12 +57,12 @@ function blockTooltipRows(b: WeekBlock): [string, string | number][] {
 
 function TooltipTable({ rows }: { rows: [string, string | number][] }) {
     return (
-        <table style={{ borderSpacing: "4px 3px", fontSize: 11, color: "rgba(255,255,255,0.7)" }}>
+        <table>
             <tbody>
                 {rows.map(([label, val]) => (
                     <tr key={label}>
-                        <td style={{ color: "rgba(255,255,255,0.4)", paddingRight: 8, whiteSpace: "nowrap" }}>{label}</td>
-                        <td style={{ color: "#e2e8f0", fontWeight: 500 }}>{val}</td>
+                        <td>{label}</td>
+                        <td>{val}</td>
                     </tr>
                 ))}
             </tbody>
@@ -151,33 +152,26 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
     }
 
     return (
-        <div
-            style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                borderRadius: 16,
-                overflow: "hidden",
-            }}
-        >
+        <div className="card" style={{ overflow: "hidden" }}>
             <div
                 style={{
                     display: "grid",
-                    gridTemplateColumns: "64px repeat(5, 1fr)",
-                    background: "rgba(255,255,255,0.08)",
-                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    gridTemplateColumns: "56px repeat(5, 1fr)",
+                    background: "var(--surface-2)",
+                    borderBottom: "1px solid var(--border)",
                 }}
             >
-                <div style={{ padding: "12px 8px", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Hora</div>
+                <div />
                 {DAY_LABELS.map((d) => (
                     <div
                         key={d}
                         style={{
-                            padding: "12px 8px",
-                            fontSize: 13,
+                            padding: "10px 8px",
+                            fontSize: 12,
                             fontWeight: 600,
                             textAlign: "center",
-                            color: "#e2e8f0",
-                            letterSpacing: "0.3px",
+                            color: "var(--text-2)",
+                            borderLeft: "1px solid var(--border)",
                         }}
                     >
                         {d}
@@ -185,26 +179,25 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
                 ))}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "64px repeat(5, 1fr)", position: "relative" }}>
-                <div style={{ position: "relative" }}>
-                    {timeLabels.map(({ label, isHour }, i) => (
-                        <div
-                            key={label}
-                            style={{
-                                height: 30,
-                                display: "flex",
-                                alignItems: "flex-start",
-                                padding: "3px 6px 0 8px",
-                                fontSize: isHour ? 10 : 9,
-                                color: isHour ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.22)",
-                                borderTop:
-                                    i === 0 ? "none" : isHour ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.03)",
-                                fontWeight: isHour ? 500 : 400,
-                            }}
-                        >
-                            {label}
-                        </div>
-                    ))}
+            <div style={{ display: "grid", gridTemplateColumns: "56px repeat(5, 1fr)", position: "relative" }}>
+                <div style={{ position: "relative" }} className="tabular">
+                    {timeLabels.map(({ label, isHour }, i) =>
+                        i === timeLabels.length - 1 ? null : (
+                            <div
+                                key={label}
+                                style={{
+                                    height: 30,
+                                    padding: "2px 8px 0 0",
+                                    textAlign: "right",
+                                    fontSize: 11,
+                                    color: "var(--text-3)",
+                                    borderTop: i === 0 ? "none" : `1px solid ${isHour ? "var(--grid-line-hour)" : "transparent"}`,
+                                }}
+                            >
+                                {isHour ? label : ""}
+                            </div>
+                        )
+                    )}
                 </div>
 
                 {DAY_KEYS.map((dayKey) => {
@@ -248,24 +241,26 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
                             key={dayKey}
                             style={{
                                 position: "relative",
-                                borderLeft: "1px solid rgba(255,255,255,0.07)",
+                                borderLeft: "1px solid var(--border)",
                                 height: TOTAL_SLOTS * 30,
                             }}
                         >
-                            {timeLabels.map(({ isHour }, i) => (
-                                <div
-                                    key={i}
-                                    style={{
-                                        position: "absolute",
-                                        top: i * 30,
-                                        left: 0,
-                                        right: 0,
-                                        height: 1,
-                                        background: i === 0 ? "transparent" : isHour ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.03)",
-                                        pointerEvents: "none",
-                                    }}
-                                />
-                            ))}
+                            {timeLabels.map(({ isHour }, i) =>
+                                i === 0 ? null : (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            position: "absolute",
+                                            top: i * 30,
+                                            left: 0,
+                                            right: 0,
+                                            height: 1,
+                                            background: isHour ? "var(--grid-line-hour)" : "var(--grid-line)",
+                                            pointerEvents: "none",
+                                        }}
+                                    />
+                                )
+                            )}
 
                             {(freeByDay[dayKey] ?? []).map((f, i) => {
                                 if (f.startMin < GRID_START || f.endMin > GRID_END) return null;
@@ -298,119 +293,96 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
                                 if (b.startMin < GRID_START || b.endMin > GRID_END) return null;
                                 const top = ((b.startMin - GRID_START) / SLOT_MINUTES) * 30;
                                 const height = ((b.endMin - b.startMin) / SLOT_MINUTES) * 30;
-                                const h = Math.max(height - 4, 18);
+                                const h = Math.max(height - 3, 18);
                                 const { col, totalCols } = layouts[i];
-                                const pad = 4;
+                                const pad = 3;
                                 const leftOffset = `calc(${pad}px + (100% - ${pad * 2}px) / ${totalCols} * ${col})`;
                                 const rightOffset = `calc(100% - ${pad}px - (100% - ${pad * 2}px) / ${totalCols} * ${col + 1})`;
 
                                 const isTEORIA = b.subject.tipo === "TEORIA";
                                 const pq = b.subject.planificada_quincenalmente?.trim().toUpperCase() ?? "";
                                 const quincena = pq === "1 QUINCENA" ? 1 : pq === "2 QUINCENA" ? 2 : null;
-                                const restingShadow = b.conflicted
-                                    ? "0 0 0 2px rgba(239,68,68,0.5), 0 2px 12px rgba(239,68,68,0.5)"
-                                    : `0 2px 12px ${b.color.border}40`;
+                                const color = b.conflicted ? CONFLICT_COLOR : b.color;
 
                                 return (
                                     <div
                                         key={b.id}
+                                        className="class-block"
                                         onPointerMove={(e) => hoverTooltip(e, b.id, { block: b })}
                                         onPointerDown={keepTouchInside}
                                         onPointerUp={(e) => tapTooltip(e, b.id, { block: b })}
-                                        onPointerLeave={(e) => {
-                                            if (e.pointerType !== "mouse") return;
-                                            setTooltip(null);
-                                            const el = e.currentTarget;
-                                            el.style.transform = "";
-                                            el.style.zIndex = String(10 + col);
-                                            el.style.boxShadow = restingShadow;
-                                        }}
-                                        onPointerEnter={(e) => {
-                                            if (e.pointerType !== "mouse") return;
-                                            const el = e.currentTarget;
-                                            el.style.transform = "scale(1.02)";
-                                            el.style.zIndex = "25";
-                                            el.style.boxShadow = `0 6px 20px ${b.color.border}80`;
-                                        }}
+                                        onPointerLeave={hideHoverTooltip}
                                         style={{
                                             position: "absolute",
-                                            top: top + 2,
+                                            top: top + 1,
                                             left: leftOffset,
                                             right: rightOffset,
-                                            marginLeft: col > 0 ? 2 : 0,
-                                            marginRight: col < totalCols - 1 ? 2 : 0,
+                                            marginLeft: col > 0 ? 1 : 0,
+                                            marginRight: col < totalCols - 1 ? 1 : 0,
                                             height: h,
-                                            background: b.conflicted ? "rgba(239,68,68,0.35)" : b.color.bg,
-                                            border: b.conflicted ? "1.5px solid #ef4444" : `1.5px solid ${b.color.border}`,
-                                            borderRadius: 6,
-                                            padding: "4px 6px",
+                                            background: color.bg,
+                                            borderLeft: `3px solid ${color.border}`,
+                                            outline: b.conflicted ? `1px solid ${color.border}` : undefined,
+                                            outlineOffset: -1,
+                                            borderRadius: 4,
+                                            padding: "3px 6px",
                                             cursor: "pointer",
                                             overflow: "hidden",
-                                            backdropFilter: "blur(4px)",
-                                            boxShadow: restingShadow,
-                                            transition: "transform 0.15s, box-shadow 0.15s",
                                             zIndex: 10 + col,
                                         }}
                                     >
-                                        <div
-                                            style={{
-                                                position: "absolute",
-                                                top: 4,
-                                                right: 4,
-                                                background: isTEORIA
-                                                    ? "rgba(255,255,255,0.25)"
-                                                    : quincena
-                                                        ? quincena === 1
-                                                            ? "rgba(245,158,11,0.55)"
-                                                            : "rgba(168,85,247,0.55)"
-                                                        : "rgba(0,0,0,0.25)",
-                                                borderRadius: 3,
-                                                padding: "1px 4px",
-                                                fontSize: 8,
-                                                fontWeight: 700,
-                                                letterSpacing: "0.4px",
-                                                color: "#fff",
-                                                whiteSpace: "nowrap",
-                                            }}
-                                        >
-                                            {isTEORIA ? "TEO" : quincena ? `PRA · Q${quincena}` : "PRA"}
-                                        </div>
-
                                         {!isTEORIA && quincena && (
                                             <div
                                                 style={{
                                                     position: "absolute",
                                                     inset: 0,
-                                                    borderRadius: 5,
-                                                    backgroundImage:
-                                                        quincena === 1
-                                                            ? "repeating-linear-gradient(45deg, rgba(245,158,11,0.12) 0px, rgba(245,158,11,0.12) 2px, transparent 2px, transparent 8px)"
-                                                            : "repeating-linear-gradient(45deg, rgba(168,85,247,0.12) 0px, rgba(168,85,247,0.12) 2px, transparent 2px, transparent 8px)",
+                                                    backgroundImage: quincenaHatch(quincena),
                                                     pointerEvents: "none",
                                                 }}
                                             />
                                         )}
 
-                                        <div
-                                            style={{
-                                                fontSize: 10,
-                                                fontWeight: 700,
-                                                color: "#fff",
-                                                lineHeight: 1.2,
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap",
-                                                paddingRight: totalCols === 1 ? 28 : 4,
-                                            }}
-                                        >
-                                            {b.conflicted ? "⚠ " : ""}
-                                            {b.title}
+                                        <div style={{ position: "relative", display: "flex", alignItems: "flex-start", gap: 4 }}>
+                                            <div
+                                                style={{
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    color: b.conflicted ? "var(--danger)" : "var(--text)",
+                                                    lineHeight: 1.3,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                }}
+                                            >
+                                                {b.conflicted ? "⚠︎ " : ""}
+                                                {b.title}
+                                            </div>
+                                            {totalCols === 1 && (
+                                                <span
+                                                    style={{
+                                                        flexShrink: 0,
+                                                        borderRadius: 3,
+                                                        padding: "0 4px",
+                                                        fontSize: 9,
+                                                        fontWeight: 600,
+                                                        lineHeight: "14px",
+                                                        letterSpacing: "0.02em",
+                                                        whiteSpace: "nowrap",
+                                                        ...badgeStyle(isTEORIA, quincena),
+                                                    }}
+                                                >
+                                                    {isTEORIA ? "TEO" : quincena ? `PRA · Q${quincena}` : "PRA"}
+                                                </span>
+                                            )}
                                         </div>
                                         {height >= 36 && b.subtitle && (
                                             <div
                                                 style={{
-                                                    fontSize: 9,
-                                                    color: "rgba(255,255,255,0.85)",
+                                                    position: "relative",
+                                                    fontSize: 10,
+                                                    color: "var(--text-2)",
                                                     overflow: "hidden",
                                                     textOverflow: "ellipsis",
                                                     display: "-webkit-box",
@@ -425,15 +397,16 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
                                         {height >= 52 && b.subject.aula && (
                                             <div
                                                 style={{
-                                                    fontSize: 8,
-                                                    color: "rgba(255,255,255,0.65)",
-                                                    marginTop: 2,
+                                                    position: "relative",
+                                                    fontSize: 10,
+                                                    color: "var(--text-3)",
+                                                    marginTop: 1,
                                                     overflow: "hidden",
                                                     textOverflow: "ellipsis",
                                                     whiteSpace: "nowrap",
                                                 }}
                                             >
-                                                🏫 {b.subject.aula}
+                                                {b.subject.aula}
                                             </div>
                                         )}
                                     </div>
@@ -445,32 +418,15 @@ export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) 
             </div>
 
             {tooltip && (
-                <div
-                    style={{
-                        position: "fixed",
-                        ...tooltipPosition(tooltip.x, tooltip.y),
-                        background: "rgba(15,12,41,0.97)",
-                        border: `1px solid ${tooltip.block ? tooltip.block.color.border : FREE_KIND_STYLE[tooltip.free.freeIn].border}`,
-                        borderRadius: 10,
-                        padding: "12px 14px",
-                        zIndex: 999,
-                        maxWidth: 280,
-                        pointerEvents: "none",
-                        boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
-                    }}
-                >
+                <div className="tooltip" style={tooltipPosition(tooltip.x, tooltip.y)}>
                     {tooltip.block ? (
                         <>
-                            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: "#fff" }}>
-                                {tooltip.block.subject.materia}
-                            </div>
+                            <div className="tooltip-title">{tooltip.block.subject.materia}</div>
                             <TooltipTable rows={blockTooltipRows(tooltip.block)} />
                         </>
                     ) : (
                         <>
-                            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: "#fff" }}>
-                                {FREE_KIND_STYLE[tooltip.free.freeIn].label}
-                            </div>
+                            <div className="tooltip-title">{FREE_KIND_STYLE[tooltip.free.freeIn].label}</div>
                             <TooltipTable
                                 rows={[
                                     ["Horario", `${fmtTime(tooltip.free.startMin)} – ${fmtTime(tooltip.free.endMin)}`],

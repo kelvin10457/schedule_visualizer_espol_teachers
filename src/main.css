@@ -1,17 +1,290 @@
 @import "tailwindcss";
 
+/* ── Tema ─────────────────────────────────────────────────────────────────────
+   Paleta neutra (grises cálidos) con un único color de acento. Las páginas usan
+   estas variables desde sus estilos inline vía var(--...). */
+:root {
+  --bg: #f5f5f3;
+  --surface: #ffffff;
+  --surface-2: #fafaf8;
+  --border: #e3e2de;
+  --border-strong: #cfcdc7;
+  --text: #1d1d1b;
+  --text-2: #57564f;
+  --text-3: #8a8981;
+
+  --accent: #1f4e8c;
+  --accent-hover: #183f72;
+  --accent-soft: #e8eef7;
+
+  --danger: #b42318;
+  --danger-soft: #fdf1ef;
+  --danger-border: #efc2bb;
+  --success: #1e7a4c;
+  --success-soft: #eef7f1;
+  --success-border: #bfe0cc;
+  --q1: #9a6512;
+  --q1-soft: #fbf3e2;
+  --q1-border: #e6cc98;
+  --q2: #65479a;
+  --q2-soft: #f3eff9;
+  --q2-border: #cfc2e5;
+
+  --grid-line: #f0efeb;
+  --grid-line-hour: #e3e2de;
+
+  --radius: 6px;
+  --shadow-pop: 0 4px 16px rgba(20, 20, 18, 0.1), 0 1px 3px rgba(20, 20, 18, 0.06);
+
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Controles ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--text-3);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-2);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: transparent;
+  color: var(--text);
+}
+.btn-danger-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-3);
+}
+.btn-danger-ghost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: transparent;
+  color: var(--danger);
+}
+.btn-lg {
+  height: 40px;
+  font-size: 14px;
+}
+.btn-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.input {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+}
+.input::placeholder {
+  color: var(--text-3);
+}
+.input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+select.input {
+  padding-right: 28px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%2357564f' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+select.input.is-danger {
+  border-color: var(--danger-border);
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* ── Contenedores ──────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.section-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.section-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.callout {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.callout-success {
+  background: var(--success-soft);
+  border-color: var(--success-border);
+  color: #164f33;
+}
+.callout-danger {
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
+  color: #7a1a12;
+}
+.callout-info {
+  background: var(--accent-soft);
+  border-color: #c9d6ea;
+  color: var(--text);
+}
+
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+.link-button:hover {
+  text-decoration-color: currentColor;
+}
+
+/* ── Cuadrícula semanal ────────────────────────────────────────────────────── */
+.class-block {
+  transition: box-shadow 0.12s;
+}
+.class-block:hover {
+  z-index: 25 !important;
+  box-shadow: var(--shadow-pop);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 999;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+}
+.tooltip-title {
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.tooltip table {
+  border-spacing: 0 3px;
+  font-size: 12px;
+}
+.tooltip td:first-child {
+  padding-right: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  vertical-align: top;
+}
+.tooltip td:last-child {
+  color: var(--text);
+}
+
 @keyframes row-added-highlight {
   0% {
-    background-color: rgba(99, 102, 241, 0.4);
-    transform: scale(1.015);
+    background-color: var(--accent-soft);
   }
   100% {
     background-color: transparent;
-    transform: scale(1);
   }
 }
 
 .row-added {
   animation: row-added-highlight 900ms ease-out;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }

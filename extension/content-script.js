@@ -92,13 +92,13 @@
     const div = document.createElement("div");
     div.id = "espol-captcha-banner";
     div.style.cssText =
-      "position:fixed;top:16px;right:16px;z-index:2147483647;background:#302b63;" +
-      "color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.45);" +
-      "font-family:'Inter','Segoe UI',sans-serif;font-size:13px;max-width:300px;line-height:1.4;";
+      "position:fixed;top:16px;right:16px;z-index:2147483647;background:#fff;border:1px solid #e3e2de;" +
+      "color:#1d1d1b;padding:14px 16px;border-radius:8px;box-shadow:0 4px 16px rgba(20,20,18,.12);" +
+      "font-family:system-ui,'Segoe UI',sans-serif;font-size:13px;max-width:300px;line-height:1.45;";
     div.innerHTML =
-      "🔒 Se detectó un captcha.<br>Resuélvelo en esta página y luego haz clic en Continuar." +
-      '<br><button id="espol-captcha-continue" style="margin-top:10px;padding:6px 14px;border:none;' +
-      "border-radius:6px;background:#6366f1;color:#fff;cursor:pointer;font-size:13px;font-weight:600;\">Continuar</button>";
+      "<strong style=\"font-weight:600\">Se detectó un captcha.</strong><br>Resuélvelo en esta página y luego haz clic en Continuar." +
+      '<br><button id="espol-captcha-continue" style="margin-top:10px;padding:6px 14px;border:1px solid #1f4e8c;' +
+      "border-radius:6px;background:#1f4e8c;color:#fff;cursor:pointer;font-size:13px;font-weight:500;\">Continuar</button>";
     document.body.appendChild(div);
     document
       .getElementById("espol-captcha-continue")

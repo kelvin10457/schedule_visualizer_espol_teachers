@@ -18,22 +18,12 @@ import {
 } from "../lib/conflicts";
 import Combobox from "../components/Combobox";
 import MiniWeekGrid, { type WeekBlock } from "../components/MiniWeekGrid";
+import { BLOCK_COLORS } from "../lib/palette";
 
 const FREE_KIND_LEGEND: { kind: FreeKind; label: string; bg: string; border: string }[] = [
-    { kind: "TODAS", label: "Libre todas las semanas", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.5)" },
-    { kind: "1", label: "Libre en 1ª quincena", bg: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.55)" },
-    { kind: "2", label: "Libre en 2ª quincena", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.55)" },
-];
-
-const SUBJECT_COLORS = [
-    { bg: "rgba(99,102,241,0.85)", border: "#6366f1" },
-    { bg: "rgba(236,72,153,0.85)", border: "#ec4899" },
-    { bg: "rgba(16,185,129,0.85)", border: "#10b981" },
-    { bg: "rgba(245,158,11,0.85)", border: "#f59e0b" },
-    { bg: "rgba(59,130,246,0.85)", border: "#3b82f6" },
-    { bg: "rgba(168,85,247,0.85)", border: "#a855f7" },
-    { bg: "rgba(20,184,166,0.85)", border: "#14b8a6" },
-    { bg: "rgba(249,115,22,0.85)", border: "#f97316" },
+    { kind: "TODAS", label: "Libre todas las semanas", bg: "rgba(30,122,76,0.10)", border: "rgba(30,122,76,0.5)" },
+    { kind: "1", label: "Libre en 1ª quincena", bg: "rgba(154,101,18,0.10)", border: "rgba(154,101,18,0.5)" },
+    { kind: "2", label: "Libre en 2ª quincena", bg: "rgba(101,71,154,0.10)", border: "rgba(101,71,154,0.5)" },
 ];
 
 interface SavedSelection {
@@ -52,13 +42,6 @@ function optionLabel(opt: SubjectOption): string {
     if (!opt.practica) return teoriaPart;
     return `${teoriaPart}  +  Práctica ${opt.practica.paralelo} — ${opt.practica.profesor}`;
 }
-
-const cardStyle: React.CSSProperties = {
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    padding: 16,
-};
 
 export default function Conflicts() {
     const navigate = useNavigate();
@@ -231,7 +214,7 @@ export default function Conflicts() {
         codes.forEach((code, idx) => {
             const opt = selection[code];
             if (!opt) return;
-            const color = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
+            const color = BLOCK_COLORS[idx % BLOCK_COLORS.length];
             opt.meetings.forEach((m, mIdx) => {
                 out.push({
                     id: `${code}-${mIdx}`,
@@ -251,7 +234,7 @@ export default function Conflicts() {
 
     if (subjects === null) {
         return (
-            <div style={{ minHeight: "100vh", background: "#0f0c29", color: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div className="page" style={{ display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-2)" }}>
                 Cargando...
             </div>
         );
@@ -260,92 +243,71 @@ export default function Conflicts() {
     if (subjects.length === 0) {
         return (
             <div
+                className="page"
                 style={{
-                    minHeight: "100vh",
-                    background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-                    color: "#e2e8f0",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
                     gap: 16,
-                    fontFamily: "'Inter', 'Segoe UI', sans-serif",
                 }}
             >
-                <p>No hay ningún horario cargado todavía.</p>
-                <button
-                    onClick={() => navigate("/")}
-                    style={{ background: "linear-gradient(135deg, #6366f1, #ec4899)", border: "none", borderRadius: 8, color: "#fff", padding: "10px 20px", cursor: "pointer" }}
-                >
+                <p style={{ margin: 0, color: "var(--text-2)" }}>No hay ningún horario cargado todavía.</p>
+                <button className="btn btn-primary" onClick={() => navigate("/")}>
                     Ir a cargar un horario
                 </button>
             </div>
         );
     }
 
+    const noLevel = !selectedNivel || codes.length === 0;
+
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-                fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                color: "#e2e8f0",
-                padding: "32px 16px 60px",
-            }}
-        >
-            <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>🔀 Cruces de horario</h1>
-                    <button
-                        onClick={() => navigate(-1)}
-                        style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, color: "#e2e8f0", padding: "6px 16px", fontSize: 13, cursor: "pointer" }}
-                    >
-                        ← Volver
+        <div className="page" style={{ padding: "32px 16px 60px" }}>
+            <div style={{ maxWidth: 880, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Cruces de horario</h1>
+                    <button className="btn" onClick={() => navigate(-1)}>
+                        Volver
                     </button>
                 </div>
 
                 {/* ── Cruces de profesores ── */}
-                <section style={cardStyle}>
-                    <h2 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>Cruces entre profesores</h2>
-                    <p style={{ margin: "0 0 14px", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                <section className="card" style={{ padding: 20 }}>
+                    <h2 className="section-title">Cruces entre profesores</h2>
+                    <p className="section-desc" style={{ marginBottom: 16 }}>
                         Profesores con dos clases distintas que caen en el mismo día y horario. Haz clic en un nombre para ver su horario.
                     </p>
 
                     {professorConflicts.length === 0 ? (
-                        <div style={{ fontSize: 13, color: "#10b981" }}>✅ No se detectó ningún cruce entre profesores.</div>
+                        <div className="callout callout-success">No se detectó ningún cruce entre profesores.</div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            {professorConflicts.map((group) => (
-                                <div key={group.profesor} style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "10px 14px" }}>
-                                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
+                        <div style={{ border: "1px solid var(--border)", borderRadius: 6 }}>
+                            {professorConflicts.map((group, gIdx) => (
+                                <div
+                                    key={group.profesor}
+                                    style={{ padding: "12px 14px", borderTop: gIdx === 0 ? "none" : "1px solid var(--border)" }}
+                                >
+                                    <div style={{ fontSize: 13, marginBottom: 6, display: "flex", justifyContent: "space-between", gap: 12 }}>
                                         <button
+                                            className="link-button"
                                             onClick={() => navigate("/show-schedule", { state: { profesor: group.profesor } })}
                                             title="Ver el horario de este profesor"
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                padding: 0,
-                                                color: "#e2e8f0",
-                                                font: "inherit",
-                                                fontWeight: 700,
-                                                textDecoration: "underline",
-                                                textDecorationColor: "rgba(255,255,255,0.35)",
-                                                textUnderlineOffset: 3,
-                                                cursor: "pointer",
-                                                textAlign: "left",
-                                            }}
+                                            style={{ fontWeight: 600 }}
                                         >
-                                            {group.profesor} →
+                                            {group.profesor}
                                         </button>
-                                        <span style={{ color: "#fca5a5" }}>{group.conflicts.length} cruce(s)</span>
+                                        <span style={{ color: "var(--danger)", fontSize: 12, fontWeight: 500, whiteSpace: "nowrap" }}>
+                                            {group.conflicts.length} {group.conflicts.length === 1 ? "cruce" : "cruces"}
+                                        </span>
                                     </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <div className="tabular" style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                                         {group.conflicts.map((c, i) => (
-                                            <div key={i} style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
-                                                <b>{c.a.section.codigoMateria}</b> ({c.a.section.tipo === "TEORIA" ? "Teoría" : "Práctica"} P{c.a.section.paralelo}, {c.a.meeting.dia}{" "}
+                                            <div key={i} style={{ fontSize: 12, color: "var(--text-2)", lineHeight: 1.5 }}>
+                                                <b style={{ color: "var(--text)", fontWeight: 600 }}>{c.a.section.codigoMateria}</b> ({c.a.section.tipo === "TEORIA" ? "Teoría" : "Práctica"} P{c.a.section.paralelo}, {c.a.meeting.dia}{" "}
                                                 {formatRange(c.a.meeting.startMin, c.a.meeting.endMin)})
-                                                {" ⚠ se cruza con "}
-                                                <b>{c.b.section.codigoMateria}</b> ({c.b.section.tipo === "TEORIA" ? "Teoría" : "Práctica"} P{c.b.section.paralelo}, {c.b.meeting.dia} {formatRange(c.b.meeting.startMin, c.b.meeting.endMin)})
+                                                <span style={{ color: "var(--text-3)" }}>{" se cruza con "}</span>
+                                                <b style={{ color: "var(--text)", fontWeight: 600 }}>{c.b.section.codigoMateria}</b> ({c.b.section.tipo === "TEORIA" ? "Teoría" : "Práctica"} P{c.b.section.paralelo}, {c.b.meeting.dia} {formatRange(c.b.meeting.startMin, c.b.meeting.endMin)})
                                             </div>
                                         ))}
                                     </div>
@@ -356,113 +318,92 @@ export default function Conflicts() {
                 </section>
 
                 {/* ── Cruces por nivel ── */}
-                <section style={cardStyle}>
-                    <h2 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>¿Se puede tomar todo un nivel sin cruces?</h2>
-                    <p style={{ margin: "0 0 14px", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
+                <section className="card" style={{ padding: 20 }}>
+                    <h2 className="section-title">¿Se puede tomar todo un nivel sin cruces?</h2>
+                    <p className="section-desc" style={{ marginBottom: 16 }}>
                         Elige un nivel, deja que la herramienta busque una combinación de paralelos sin cruces, o ajústala tú mismo abajo.
                     </p>
 
-                    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                         <Combobox options={niveles} value={selectedNivel} onChange={setSelectedNivel} placeholder="Elige un nivel..." width={260} />
-                        <button
-                            onClick={handleAutoSearch}
-                            disabled={!selectedNivel || codes.length === 0}
-                            style={{
-                                background: !selectedNivel || codes.length === 0 ? "rgba(255,255,255,0.08)" : "linear-gradient(135deg, #6366f1, #ec4899)",
-                                border: "none",
-                                borderRadius: 8,
-                                color: "#fff",
-                                padding: "8px 16px",
-                                fontSize: 13,
-                                fontWeight: 700,
-                                cursor: !selectedNivel || codes.length === 0 ? "not-allowed" : "pointer",
-                            }}
-                        >
+                        <button className="btn btn-primary" onClick={handleAutoSearch} disabled={noLevel}>
                             Buscar combinación sin cruces
                         </button>
-                        <button
-                            onClick={handleShowAllCombos}
-                            disabled={!selectedNivel || codes.length === 0}
-                            style={{
-                                background: "rgba(255,255,255,0.1)",
-                                border: "1px solid rgba(255,255,255,0.2)",
-                                borderRadius: 8,
-                                color: "#e2e8f0",
-                                padding: "8px 16px",
-                                fontSize: 13,
-                                fontWeight: 600,
-                                cursor: !selectedNivel || codes.length === 0 ? "not-allowed" : "pointer",
-                                opacity: !selectedNivel || codes.length === 0 ? 0.5 : 1,
-                            }}
-                        >
-                            Ver todas las combinaciones sin cruces
+                        <button className="btn" onClick={handleShowAllCombos} disabled={noLevel}>
+                            Ver todas las combinaciones
                         </button>
                     </div>
 
                     {combosState.status === "ready" && (
                         <div
+                            className="tabular"
                             style={{
                                 marginTop: 14,
                                 display: "flex",
                                 alignItems: "center",
                                 gap: 10,
-                                background: "rgba(99,102,241,0.1)",
-                                border: "1px solid rgba(99,102,241,0.35)",
-                                borderRadius: 10,
-                                padding: "8px 12px",
+                                flexWrap: "wrap",
                             }}
                         >
-                            <button
-                                onClick={() => gotoCombo(-1)}
-                                disabled={combosState.combos.length <= 1}
-                                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#e2e8f0", padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
-                            >
-                                ‹
-                            </button>
-                            <span style={{ fontSize: 13 }}>
-                                Combinación {combosState.index + 1} de {combosState.combos.length}
-                                {combosState.truncated ? "+" : ""}
-                            </span>
-                            <button
-                                onClick={() => gotoCombo(1)}
-                                disabled={combosState.combos.length <= 1}
-                                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#e2e8f0", padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
-                            >
-                                ›
-                            </button>
+                            <div style={{ display: "inline-flex", alignItems: "center", border: "1px solid var(--border-strong)", borderRadius: 6, overflow: "hidden" }}>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => gotoCombo(-1)}
+                                    disabled={combosState.combos.length <= 1}
+                                    aria-label="Combinación anterior"
+                                    style={{ borderRadius: 0, width: 32, padding: 0 }}
+                                >
+                                    ‹
+                                </button>
+                                <span style={{ fontSize: 13, padding: "0 12px", borderLeft: "1px solid var(--border)", borderRight: "1px solid var(--border)", lineHeight: "32px" }}>
+                                    Combinación {combosState.index + 1} de {combosState.combos.length}
+                                    {combosState.truncated ? "+" : ""}
+                                </span>
+                                <button
+                                    className="btn btn-ghost"
+                                    onClick={() => gotoCombo(1)}
+                                    disabled={combosState.combos.length <= 1}
+                                    aria-label="Combinación siguiente"
+                                    style={{ borderRadius: 0, width: 32, padding: 0 }}
+                                >
+                                    ›
+                                </button>
+                            </div>
                             {combosState.truncated && (
-                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
-                                    (se limitó la búsqueda a las primeras {combosState.combos.length} para no trabar el navegador)
+                                <span style={{ fontSize: 12, color: "var(--text-3)" }}>
+                                    Se limitó la búsqueda a las primeras {combosState.combos.length} para no trabar el navegador.
                                 </span>
                             )}
                         </div>
                     )}
 
                     {selectedNivel && codes.length === 0 && (
-                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 12 }}>Este nivel no tiene materias con horario cargado.</p>
+                        <p style={{ fontSize: 13, color: "var(--text-2)", marginTop: 12, marginBottom: 0 }}>Este nivel no tiene materias con horario cargado.</p>
                     )}
 
                     {autoResult.status === "found" && (
-                        <div style={{ marginTop: 14, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.35)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
-                            ✅ Sí es posible — se armó una combinación sin cruces para las {autoResult.combo.length} materias de este nivel (aplicada abajo).
+                        <div className="callout callout-success" style={{ marginTop: 14 }}>
+                            <strong style={{ fontWeight: 600 }}>Sí es posible.</strong> Se armó una combinación sin cruces para las {autoResult.combo.length} materias de este nivel (aplicada abajo).
                         </div>
                     )}
 
                     {autoResult.status === "not-found" && (
-                        <div style={{ marginTop: 14, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 10, padding: "10px 14px", fontSize: 13 }}>
+                        <div className="callout callout-danger" style={{ marginTop: 14 }}>
                             <div style={{ marginBottom: infeasiblePairs.length > 0 ? 8 : 0 }}>
-                                ❌ No existe ninguna combinación de paralelos sin cruces para este nivel.
+                                <strong style={{ fontWeight: 600 }}>No es posible.</strong> No existe ninguna combinación de paralelos sin cruces para este nivel.
                             </div>
                             {infeasiblePairs.length > 0 && (
                                 <div>
-                                    <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
+                                    <div style={{ fontSize: 12, marginBottom: 4, opacity: 0.8 }}>
                                         Pares que siempre se cruzan (sin importar el paralelo elegido):
                                     </div>
-                                    {infeasiblePairs.map((p, i) => (
-                                        <div key={i} style={{ fontSize: 12 }}>
-                                            • {p.materiaA} ({p.codigoA}) ↔ {p.materiaB} ({p.codigoB})
-                                        </div>
-                                    ))}
+                                    <ul style={{ margin: 0, paddingLeft: 18, listStyle: "disc" }}>
+                                        {infeasiblePairs.map((p, i) => (
+                                            <li key={i} style={{ fontSize: 12 }}>
+                                                {p.materiaA} ({p.codigoA}) ↔ {p.materiaB} ({p.codigoB})
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>
@@ -470,37 +411,44 @@ export default function Conflicts() {
 
                     {codes.length > 0 && (
                         <>
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 16 }}>
+                            <div style={{ marginTop: 20, border: "1px solid var(--border)", borderRadius: 6 }}>
                                 {codes.map((code, idx) => {
                                     const opts = optionsByCodigo.get(code) ?? [];
                                     const current = selection[code];
-                                    const color = SUBJECT_COLORS[idx % SUBJECT_COLORS.length];
+                                    const color = BLOCK_COLORS[idx % BLOCK_COLORS.length];
                                     const conflicted = conflictedCodes.has(code);
                                     return (
-                                        <div key={code} style={{ display: "grid", gridTemplateColumns: "160px 1fr", gap: 10, alignItems: "center" }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                                                <span style={{ width: 10, height: 10, borderRadius: 3, background: color.bg, border: `1.5px solid ${color.border}`, flexShrink: 0 }} />
-                                                <span style={{ fontWeight: 700 }}>{code}</span>
-                                                {conflicted && <span title="Se cruza con otra materia elegida">⚠</span>}
+                                        <div
+                                            key={code}
+                                            style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "150px 1fr",
+                                                gap: 12,
+                                                alignItems: "center",
+                                                padding: "8px 12px",
+                                                borderTop: idx === 0 ? "none" : "1px solid var(--border)",
+                                            }}
+                                        >
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                                                <span style={{ width: 8, height: 8, borderRadius: 2, background: color.border, flexShrink: 0 }} />
+                                                <span style={{ fontWeight: 600 }}>{code}</span>
+                                                {conflicted && (
+                                                    <span title="Se cruza con otra materia elegida" style={{ fontSize: 11, color: "var(--danger)", fontWeight: 500 }}>
+                                                        cruce
+                                                    </span>
+                                                )}
                                             </div>
                                             <select
+                                                className={conflicted ? "input is-danger" : "input"}
                                                 value={current ? opts.indexOf(current) : 0}
                                                 onChange={(e) => {
                                                     const opt = opts[Number(e.target.value)];
                                                     if (opt) setSelection((prev) => ({ ...prev, [code]: opt }));
                                                     setCombosState({ status: "idle" });
                                                 }}
-                                                style={{
-                                                    background: "rgba(255,255,255,0.08)",
-                                                    border: conflicted ? "1px solid rgba(239,68,68,0.5)" : "1px solid rgba(255,255,255,0.2)",
-                                                    borderRadius: 8,
-                                                    color: "#e2e8f0",
-                                                    padding: "6px 10px",
-                                                    fontSize: 12,
-                                                }}
                                             >
                                                 {opts.map((opt, i) => (
-                                                    <option key={i} value={i} style={{ background: "#302b63" }}>
+                                                    <option key={i} value={i}>
                                                         {optionLabel(opt)}
                                                     </option>
                                                 ))}
@@ -510,42 +458,49 @@ export default function Conflicts() {
                                 })}
                             </div>
 
-                            <div style={{ marginTop: 16 }}>
-                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
-                                    Huecos libres del nivel — ningún paralelo de ninguna materia tiene clase ahí, es donde cabría abrir un paralelo nuevo.
+                            <div style={{ marginTop: 20 }}>
+                                <div className="eyebrow" style={{ marginBottom: 4 }}>
+                                    Huecos libres del nivel
                                 </div>
+                                <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--text-2)" }}>
+                                    Ningún paralelo de ninguna materia tiene clase ahí; es donde cabría abrir un paralelo nuevo.
+                                </p>
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px" }}>
                                     {FREE_KIND_LEGEND.map(({ kind, label, bg, border }) => (
                                         <div key={kind} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                            <span style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px dashed ${border}`, flexShrink: 0 }} />
-                                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>{label}</span>
+                                            <span style={{ width: 12, height: 12, borderRadius: 2, background: bg, border: `1px dashed ${border}`, flexShrink: 0 }} />
+                                            <span style={{ fontSize: 12, color: "var(--text-2)" }}>{label}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div style={{ marginTop: 8 }}>
-                                <MiniWeekGrid blocks={blocks} freeBlocks={freeBlocks} />
+                            <div style={{ marginTop: 10, overflowX: "auto" }}>
+                                <div style={{ minWidth: 620 }}>
+                                    <MiniWeekGrid blocks={blocks} freeBlocks={freeBlocks} />
+                                </div>
                             </div>
 
                             {freeBlocks.length > 0 && (
-                                <div style={{ marginTop: 12 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+                                <div style={{ marginTop: 16 }}>
+                                    <div className="eyebrow" style={{ marginBottom: 6 }}>
                                         Huecos por día
                                     </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                    <div className="tabular" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                                         {["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"].map((dia) => {
                                             const dayFree = freeBlocks.filter((f) => f.dia === dia);
                                             if (dayFree.length === 0) return null;
                                             return (
-                                                <div key={dia} style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
-                                                    <b>{dia.charAt(0) + dia.slice(1).toLowerCase()}</b>:{" "}
-                                                    {dayFree.map((f, i) => (
-                                                        <span key={i}>
-                                                            {formatRange(f.startMin, f.endMin)}
-                                                            {f.freeIn !== "TODAS" ? ` (${f.freeIn}ª quincena)` : ""}
-                                                            {i < dayFree.length - 1 ? " · " : ""}
-                                                        </span>
-                                                    ))}
+                                                <div key={dia} style={{ fontSize: 12, color: "var(--text-2)", display: "grid", gridTemplateColumns: "80px 1fr", gap: 8 }}>
+                                                    <span style={{ fontWeight: 600, color: "var(--text)" }}>{dia.charAt(0) + dia.slice(1).toLowerCase()}</span>
+                                                    <span>
+                                                        {dayFree.map((f, i) => (
+                                                            <span key={i}>
+                                                                {formatRange(f.startMin, f.endMin)}
+                                                                {f.freeIn !== "TODAS" ? ` (${f.freeIn}ª quincena)` : ""}
+                                                                {i < dayFree.length - 1 ? " · " : ""}
+                                                            </span>
+                                                        ))}
+                                                    </span>
                                                 </div>
                                             );
                                         })}

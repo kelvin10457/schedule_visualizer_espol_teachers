@@ -8,99 +8,136 @@
       body {
         margin: 0;
         width: 360px;
-        font-family: 'Segoe UI', 'Inter', sans-serif;
-        background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-        color: #e2e8f0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 13px;
+        background: #f5f5f3;
+        color: #1d1d1b;
       }
-      .wrap { padding: 18px 18px 16px; }
+      .wrap { padding: 16px; }
       h1 {
         font-size: 15px;
+        font-weight: 600;
         margin: 0 0 2px;
         display: flex;
         align-items: center;
         gap: 8px;
       }
-      .subtitle { font-size: 11px; color: rgba(255,255,255,0.5); margin: 0 0 14px; }
+      .mark {
+        width: 24px;
+        height: 24px;
+        border-radius: 5px;
+        background: #1f4e8c;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .subtitle { font-size: 12px; color: #57564f; margin: 0 0 14px; }
       .notice {
-        background: rgba(239,68,68,0.12);
-        border: 1px solid rgba(239,68,68,0.4);
-        border-radius: 8px;
+        background: #fdf1ef;
+        border: 1px solid #efc2bb;
+        color: #7a1a12;
+        border-radius: 6px;
         padding: 10px 12px;
         font-size: 12px;
         margin-bottom: 12px;
-        line-height: 1.4;
+        line-height: 1.45;
       }
       .notice button {
         margin-top: 8px;
         width: 100%;
+        background: #fff;
+        border: 1px solid #cfcdc7;
+        color: #1d1d1b;
       }
+      .notice button:hover { background: #fafaf8; }
       label {
         display: block;
-        font-size: 11px;
-        color: rgba(255,255,255,0.6);
+        font-size: 12px;
+        font-weight: 500;
+        color: #57564f;
         margin: 10px 0 4px;
       }
       input[type="number"], select, textarea {
         width: 100%;
-        background: rgba(255,255,255,0.08);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 8px;
-        color: #e2e8f0;
+        background: #fff;
+        border: 1px solid #cfcdc7;
+        border-radius: 6px;
+        color: #1d1d1b;
         padding: 7px 10px;
         font-size: 13px;
         font-family: inherit;
       }
+      input[type="number"]:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #1f4e8c;
+        box-shadow: 0 0 0 3px #e8eef7;
+      }
       textarea { resize: vertical; min-height: 64px; line-height: 1.4; }
+      textarea::placeholder { color: #8a8981; }
       .row { display: flex; gap: 8px; }
       .row > div { flex: 1; }
-      .hint { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; line-height: 1.4; }
+      .hint { font-size: 11px; color: #8a8981; margin: 4px 0 0; line-height: 1.45; }
       button {
         cursor: pointer;
-        border: none;
-        border-radius: 8px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        font-family: inherit;
         font-size: 13px;
-        font-weight: 600;
-        padding: 9px 0;
+        font-weight: 500;
+        padding: 8px 0;
+        transition: background-color 0.12s, border-color 0.12s;
       }
       .btn-primary {
         width: 100%;
         margin-top: 14px;
-        background: linear-gradient(135deg, #6366f1, #ec4899);
+        background: #1f4e8c;
+        border-color: #1f4e8c;
         color: #fff;
       }
+      .btn-primary:hover:not(:disabled) { background: #183f72; }
       .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .btn-secondary {
         width: 100%;
         margin-top: 8px;
-        background: rgba(255,255,255,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-        color: #e2e8f0;
+        background: #fff;
+        border-color: #cfcdc7;
+        color: #1d1d1b;
       }
+      .btn-secondary:hover { background: #fafaf8; border-color: #8a8981; }
       .status {
         margin-top: 14px;
-        border-top: 1px solid rgba(255,255,255,0.1);
+        border-top: 1px solid #e3e2de;
         padding-top: 10px;
       }
-      .status-title { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 6px; display:flex; justify-content:space-between; }
+      .status-title { font-size: 12px; color: #57564f; margin-bottom: 6px; display:flex; justify-content:space-between; }
       .log {
         max-height: 130px;
         overflow-y: auto;
-        background: rgba(0,0,0,0.25);
-        border-radius: 8px;
+        background: #fff;
+        border: 1px solid #e3e2de;
+        border-radius: 6px;
         padding: 8px 10px;
+        font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
         font-size: 11px;
         line-height: 1.5;
-        color: rgba(255,255,255,0.75);
+        color: #57564f;
       }
-      .log div:last-child { color: #fff; font-weight: 600; }
+      .log div:last-child { color: #1d1d1b; font-weight: 600; }
       .links { display: flex; gap: 8px; margin-top: 8px; }
       .links button { flex: 1; }
-      a.linklike { color: #a5b4fc; text-decoration: underline; cursor: pointer; }
+      a.linklike { color: #1f4e8c; text-decoration: underline; cursor: pointer; }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <h1>📅 ESPOL Horarios</h1>
+      <h1>
+        <span class="mark" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="12" height="11" rx="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke-linecap="round"/></svg>
+        </span>
+        ESPOL Horarios
+      </h1>
       <p class="subtitle">Extrae y visualiza horarios sin salir del navegador</p>
 
       <div id="notice" class="notice" style="display:none"></div>

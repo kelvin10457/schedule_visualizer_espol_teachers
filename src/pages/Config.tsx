@@ -80,66 +80,42 @@ export default function Config() {
         setSaved(false);
     }
 
-    const inputStyle: React.CSSProperties = {
-        width: "100%",
-        background: "rgba(255,255,255,0.08)",
-        border: "1px solid rgba(255,255,255,0.2)",
-        borderRadius: 6,
-        color: "#e2e8f0",
-        padding: "6px 10px",
-        fontSize: 13,
-        boxSizing: "border-box",
-    };
-
     return (
-        <div
-            style={{
-                minHeight: "100vh",
-                background: "linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-                fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                color: "#e2e8f0",
-                padding: "32px 16px 60px",
-            }}
-        >
+        <div className="page" style={{ padding: "32px 16px 60px" }}>
             <div style={{ maxWidth: 640, margin: "0 auto" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>⚙️ Configuración de niveles</h1>
-                    <button
-                        onClick={() => navigate(-1)}
-                        style={{
-                            background: "rgba(255,255,255,0.1)",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            borderRadius: 8,
-                            color: "#e2e8f0",
-                            padding: "6px 16px",
-                            fontSize: 13,
-                            cursor: "pointer",
-                        }}
-                    >
-                        ← Volver
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 20 }}>
+                    <div>
+                        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Niveles de la malla curricular</h1>
+                        <p className="section-desc" style={{ maxWidth: 520 }}>
+                            Mapeo de código de materia → nivel. Se usa para clasificar cada materia extraída.
+                            Los cambios se guardan en este navegador y los usan tanto la extensión como este
+                            visualizador.
+                        </p>
+                    </div>
+                    <button className="btn" onClick={() => navigate(-1)}>
+                        Volver
                     </button>
                 </div>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.55)", marginTop: 0 }}>
-                    Mapeo de código de materia → nivel de la malla curricular. Se usa para clasificar
-                    cada materia extraída. Los cambios se guardan en este navegador y los usa tanto la
-                    extensión al extraer datos nuevos como este visualizador.
-                </p>
 
-                <div
-                    style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: 12,
-                        padding: 16,
-                    }}
-                >
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 32px", gap: 8, fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 6, padding: "0 2px" }}>
+                <div className="card">
+                    <div
+                        className="eyebrow"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 32px",
+                            gap: 8,
+                            padding: "10px 16px",
+                            borderBottom: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                            borderRadius: "8px 8px 0 0",
+                        }}
+                    >
                         <span>Código de materia</span>
                         <span>Nivel</span>
                         <span />
                     </div>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 420, overflowY: "auto", padding: 2 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 440, overflowY: "auto", padding: "10px 16px" }}>
                         {rows.map((row) => (
                             <div
                                 key={row.id}
@@ -156,7 +132,7 @@ export default function Config() {
                                     ref={(el) => {
                                         codigoInputRefs.current[row.id] = el;
                                     }}
-                                    style={inputStyle}
+                                    className="input"
                                     value={row.codigo}
                                     placeholder="ELEG1028"
                                     onChange={(e) => updateRow(row.id, "codigo", e.target.value)}
@@ -170,71 +146,47 @@ export default function Config() {
                                     allowCustom
                                 />
                                 <button
+                                    className="btn btn-danger-ghost"
                                     onClick={() => removeRow(row.id)}
                                     title="Eliminar"
-                                    style={{
-                                        background: "rgba(239,68,68,0.15)",
-                                        border: "1px solid rgba(239,68,68,0.4)",
-                                        borderRadius: 6,
-                                        color: "#fca5a5",
-                                        cursor: "pointer",
-                                        fontSize: 13,
-                                    }}
+                                    aria-label="Eliminar fila"
+                                    style={{ padding: 0, width: 32 }}
                                 >
-                                    ✕
+                                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                                        <path d="M4 4l8 8M12 4l-8 8" />
+                                    </svg>
                                 </button>
                             </div>
                         ))}
                     </div>
 
-                    <button
-                        onClick={addRow}
+                    <div style={{ padding: "0 16px 16px" }}>
+                        <button className="btn btn-ghost" onClick={addRow} style={{ width: "100%", border: "1px dashed var(--border-strong)" }}>
+                            + Agregar materia
+                        </button>
+                    </div>
+
+                    <div
                         style={{
-                            marginTop: 12,
-                            background: "rgba(255,255,255,0.1)",
-                            border: "1px dashed rgba(255,255,255,0.3)",
-                            borderRadius: 8,
-                            color: "#e2e8f0",
-                            padding: "8px 0",
-                            width: "100%",
-                            cursor: "pointer",
-                            fontSize: 13,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "12px 16px",
+                            borderTop: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                            borderRadius: "0 0 8px 8px",
                         }}
                     >
-                        + Agregar materia
-                    </button>
-
-                    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                        <button
-                            onClick={handleSave}
-                            style={{
-                                flex: 1,
-                                background: "linear-gradient(135deg, #6366f1, #ec4899)",
-                                border: "none",
-                                borderRadius: 8,
-                                color: "#fff",
-                                padding: "10px 0",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                fontSize: 13,
-                            }}
-                        >
-                            {saved ? "Guardado ✓" : "Guardar cambios"}
-                        </button>
-                        <button
-                            onClick={handleReset}
-                            style={{
-                                background: "rgba(255,255,255,0.1)",
-                                border: "1px solid rgba(255,255,255,0.2)",
-                                borderRadius: 8,
-                                color: "#e2e8f0",
-                                padding: "10px 16px",
-                                cursor: "pointer",
-                                fontSize: 13,
-                            }}
-                        >
+                        <button className="btn btn-ghost" onClick={handleReset}>
                             Restaurar por defecto
                         </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            {saved && <span style={{ fontSize: 13, color: "var(--success)" }}>Cambios guardados</span>}
+                            <button className="btn btn-primary" onClick={handleSave}>
+                                Guardar cambios
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
