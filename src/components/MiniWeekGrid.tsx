@@ -11,8 +11,19 @@ export interface WeekBlock {
     conflicted?: boolean;
 }
 
+export interface FreeBlockInput {
+    dia: string;
+    startMin: number;
+    endMin: number;
+}
+
 interface MiniWeekGridProps {
     blocks: WeekBlock[];
+    freeBlocks?: FreeBlockInput[];
+}
+
+function fmtTime(m: number): string {
+    return `${Math.floor(m / 60).toString().padStart(2, "0")}:${(m % 60).toString().padStart(2, "0")}`;
 }
 
 const DAY_LABELS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
@@ -26,7 +37,7 @@ const TOTAL_SLOTS = (GRID_END - GRID_START) / SLOT_MINUTES;
 // Cuadrícula semanal simple y autocontenida (no comparte código con el horario
 // principal a propósito: aquí siempre son pocos bloques — el combo de un nivel — y no
 // necesita todo el manejo de filtros/leyenda/tooltip del horario completo).
-export default function MiniWeekGrid({ blocks }: MiniWeekGridProps) {
+export default function MiniWeekGrid({ blocks, freeBlocks }: MiniWeekGridProps) {
     const byDay = useMemo(() => {
         const map: Record<string, WeekBlock[]> = {};
         for (const key of DAY_KEYS) map[key] = [];
@@ -35,6 +46,15 @@ export default function MiniWeekGrid({ blocks }: MiniWeekGridProps) {
         }
         return map;
     }, [blocks]);
+
+    const freeByDay = useMemo(() => {
+        const map: Record<string, FreeBlockInput[]> = {};
+        for (const key of DAY_KEYS) map[key] = [];
+        for (const f of freeBlocks ?? []) {
+            if (map[f.dia]) map[f.dia].push(f);
+        }
+        return map;
+    }, [freeBlocks]);
 
     const timeLabels: { label: string; isHour: boolean }[] = [];
     for (let m = GRID_START; m <= GRID_END; m += 60) {
@@ -142,6 +162,28 @@ export default function MiniWeekGrid({ blocks }: MiniWeekGridProps) {
                                     }}
                                 />
                             ))}
+
+                            {(freeByDay[dayKey] ?? []).map((f, i) => {
+                                if (f.startMin < GRID_START || f.endMin > GRID_END) return null;
+                                const top = ((f.startMin - GRID_START) / SLOT_MINUTES) * 30;
+                                const h = ((f.endMin - f.startMin) / SLOT_MINUTES) * 30;
+                                return (
+                                    <div
+                                        key={`free-${i}`}
+                                        title={`Hueco libre ${fmtTime(f.startMin)}–${fmtTime(f.endMin)}`}
+                                        style={{
+                                            position: "absolute",
+                                            top,
+                                            left: 0,
+                                            right: 0,
+                                            height: h,
+                                            background: "rgba(16,185,129,0.10)",
+                                            borderTop: "1px dashed rgba(16,185,129,0.4)",
+                                            borderBottom: "1px dashed rgba(16,185,129,0.4)",
+                                        }}
+                                    />
+                                );
+                            })}
 
                             {dayBlocks.map((b, i) => {
                                 if (b.startMin < GRID_START || b.endMin > GRID_END) return null;

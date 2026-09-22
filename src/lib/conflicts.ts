@@ -266,3 +266,92 @@ export function findConflictFreeCombo(optionsByCodigo: Map<string, SubjectOption
 
     return backtrack(0) ? [...chosen] : null;
 }
+
+// Como findConflictFreeCombo pero junta TODAS las combinaciones sin cruce (hasta un tope),
+// para poder navegarlas una por una en vez de quedarse con la primera que encuentra.
+export function findAllConflictFreeCombos(
+    optionsByCodigo: Map<string, SubjectOption[]>,
+    maxResults = 200
+): { combos: SubjectOption[][]; truncated: boolean } {
+    const codes = Array.from(optionsByCodigo.keys()).sort(
+        (a, b) => optionsByCodigo.get(a)!.length - optionsByCodigo.get(b)!.length
+    );
+
+    const chosen: SubjectOption[] = [];
+    const combos: SubjectOption[][] = [];
+    let nodesVisited = 0;
+    const MAX_NODES = 300000;
+    let truncated = false;
+
+    function backtrack(idx: number): void {
+        if (combos.length >= maxResults || nodesVisited > MAX_NODES) {
+            truncated = true;
+            return;
+        }
+        if (idx === codes.length) {
+            combos.push([...chosen]);
+            return;
+        }
+        const options = optionsByCodigo.get(codes[idx])!;
+        for (const opt of options) {
+            nodesVisited++;
+            if (nodesVisited > MAX_NODES) {
+                truncated = true;
+                return;
+            }
+            if (chosen.every((c) => !optionsConflict(c, opt))) {
+                chosen.push(opt);
+                backtrack(idx + 1);
+                chosen.pop();
+                if (combos.length >= maxResults) {
+                    truncated = true;
+                    return;
+                }
+            }
+        }
+    }
+
+    backtrack(0);
+    return { combos, truncated };
+}
+
+export interface FreeBlock {
+    dia: string;
+    startMin: number;
+    endMin: number;
+}
+
+const ALL_DAY_KEYS = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
+
+// Huecos: intervalos del día en que ninguna sección del nivel tiene clase (sin importar
+// materia, tipo o paralelo). Ahí cabría un paralelo nuevo sin chocar con nada de lo que
+// ya se dicta en ese nivel — útil para detectar dónde abrir cupo cuando la demanda supera
+// la capacidad actual.
+export function computeFreeBlocks(sections: Section[], gridStart = 7 * 60, gridEnd = 22 * 60): FreeBlock[] {
+    const byDay = new Map<string, { start: number; end: number }[]>();
+    for (const key of ALL_DAY_KEYS) byDay.set(key, []);
+    for (const sec of sections) {
+        for (const m of sec.meetings) {
+            if (!byDay.has(m.dia)) continue;
+            byDay.get(m.dia)!.push({ start: m.startMin, end: m.endMin });
+        }
+    }
+
+    const result: FreeBlock[] = [];
+    for (const dia of ALL_DAY_KEYS) {
+        const intervals = byDay.get(dia)!.sort((a, b) => a.start - b.start);
+        let cursor = gridStart;
+        for (const { start, end } of intervals) {
+            const clampedStart = Math.max(start, gridStart);
+            const clampedEnd = Math.min(end, gridEnd);
+            if (clampedStart > cursor) {
+                result.push({ dia, startMin: cursor, endMin: clampedStart });
+            }
+            cursor = Math.max(cursor, clampedEnd);
+        }
+        if (cursor < gridEnd) {
+            result.push({ dia, startMin: cursor, endMin: gridEnd });
+        }
+    }
+    return result;
+}
