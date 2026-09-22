@@ -6,6 +6,8 @@ import { CURRENT_SUBJECTS_KEY } from "../lib/constants";
 import {
     buildSections,
     buildSubjectOptions,
+    computeFreeBlocks,
+    findAllConflictFreeCombos,
     findConflictFreeCombo,
     findProfessorConflicts,
     meetingsOverlap,
@@ -50,6 +52,10 @@ export default function Conflicts() {
         | { status: "found"; combo: SubjectOption[] }
         | { status: "not-found" }
     >({ status: "idle" });
+    const [combosState, setCombosState] = useState<
+        | { status: "idle" }
+        | { status: "ready"; combos: SubjectOption[][]; truncated: boolean; index: number }
+    >({ status: "idle" });
 
     useEffect(() => {
         getStorageItem<Subject[]>(CURRENT_SUBJECTS_KEY, []).then(setSubjects);
@@ -70,6 +76,15 @@ export default function Conflicts() {
 
     const codes = useMemo(() => Array.from(optionsByCodigo.keys()).sort(), [optionsByCodigo]);
 
+    // Secciones crudas del nivel (todas las materias, tipos y paralelos) — se usan para
+    // detectar los huecos libres, independientemente de qué opción esté seleccionada.
+    const levelSections = useMemo(() => {
+        if (!subjects || !selectedNivel) return [];
+        return buildSections(subjects.filter((s) => s.nivel === selectedNivel));
+    }, [subjects, selectedNivel]);
+
+    const freeBlocks = useMemo(() => computeFreeBlocks(levelSections), [levelSections]);
+
     // Al cambiar de nivel, arranca con la primera opción de cada materia y limpia el
     // resultado de la búsqueda automática anterior.
     useEffect(() => {
@@ -80,19 +95,46 @@ export default function Conflicts() {
         }
         setSelection(initial);
         setAutoResult({ status: "idle" });
+        setCombosState({ status: "idle" });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedNivel]);
 
+    function applyCombo(combo: SubjectOption[]) {
+        const next: Record<string, SubjectOption> = {};
+        for (const opt of combo) next[opt.codigoMateria] = opt;
+        setSelection(next);
+    }
+
     function handleAutoSearch() {
+        setCombosState({ status: "idle" });
         const combo = findConflictFreeCombo(optionsByCodigo);
         if (combo) {
-            const next: Record<string, SubjectOption> = {};
-            for (const opt of combo) next[opt.codigoMateria] = opt;
-            setSelection(next);
+            applyCombo(combo);
             setAutoResult({ status: "found", combo });
         } else {
             setAutoResult({ status: "not-found" });
         }
+    }
+
+    function handleShowAllCombos() {
+        const { combos, truncated } = findAllConflictFreeCombos(optionsByCodigo);
+        if (combos.length === 0) {
+            setCombosState({ status: "idle" });
+            setAutoResult({ status: "not-found" });
+            return;
+        }
+        applyCombo(combos[0]);
+        setAutoResult({ status: "found", combo: combos[0] });
+        setCombosState({ status: "ready", combos, truncated, index: 0 });
+    }
+
+    function gotoCombo(delta: number) {
+        setCombosState((prev) => {
+            if (prev.status !== "ready") return prev;
+            const nextIndex = (prev.index + delta + prev.combos.length) % prev.combos.length;
+            applyCombo(prev.combos[nextIndex]);
+            return { ...prev, index: nextIndex };
+        });
     }
 
     const infeasiblePairs = useMemo(() => {
@@ -277,7 +319,63 @@ export default function Conflicts() {
                         >
                             Buscar combinación sin cruces
                         </button>
+                        <button
+                            onClick={handleShowAllCombos}
+                            disabled={!selectedNivel || codes.length === 0}
+                            style={{
+                                background: "rgba(255,255,255,0.1)",
+                                border: "1px solid rgba(255,255,255,0.2)",
+                                borderRadius: 8,
+                                color: "#e2e8f0",
+                                padding: "8px 16px",
+                                fontSize: 13,
+                                fontWeight: 600,
+                                cursor: !selectedNivel || codes.length === 0 ? "not-allowed" : "pointer",
+                                opacity: !selectedNivel || codes.length === 0 ? 0.5 : 1,
+                            }}
+                        >
+                            Ver todas las combinaciones sin cruces
+                        </button>
                     </div>
+
+                    {combosState.status === "ready" && (
+                        <div
+                            style={{
+                                marginTop: 14,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                background: "rgba(99,102,241,0.1)",
+                                border: "1px solid rgba(99,102,241,0.35)",
+                                borderRadius: 10,
+                                padding: "8px 12px",
+                            }}
+                        >
+                            <button
+                                onClick={() => gotoCombo(-1)}
+                                disabled={combosState.combos.length <= 1}
+                                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#e2e8f0", padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
+                            >
+                                ‹
+                            </button>
+                            <span style={{ fontSize: 13 }}>
+                                Combinación {combosState.index + 1} de {combosState.combos.length}
+                                {combosState.truncated ? "+" : ""}
+                            </span>
+                            <button
+                                onClick={() => gotoCombo(1)}
+                                disabled={combosState.combos.length <= 1}
+                                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#e2e8f0", padding: "4px 10px", fontSize: 13, cursor: "pointer" }}
+                            >
+                                ›
+                            </button>
+                            {combosState.truncated && (
+                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                                    (se limitó la búsqueda a las primeras {combosState.combos.length} para no trabar el navegador)
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {selectedNivel && codes.length === 0 && (
                         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 12 }}>Este nivel no tiene materias con horario cargado.</p>
@@ -329,6 +427,7 @@ export default function Conflicts() {
                                                 onChange={(e) => {
                                                     const opt = opts[Number(e.target.value)];
                                                     if (opt) setSelection((prev) => ({ ...prev, [code]: opt }));
+                                                    setCombosState({ status: "idle" });
                                                 }}
                                                 style={{
                                                     background: "rgba(255,255,255,0.08)",
@@ -350,9 +449,40 @@ export default function Conflicts() {
                                 })}
                             </div>
 
-                            <div style={{ marginTop: 16 }}>
-                                <MiniWeekGrid blocks={blocks} />
+                            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(16,185,129,0.15)", border: "1px dashed rgba(16,185,129,0.5)", flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                                    Huecos libres del nivel — ningún paralelo de ninguna materia tiene clase ahí, es donde cabría abrir un paralelo nuevo.
+                                </span>
                             </div>
+                            <div style={{ marginTop: 8 }}>
+                                <MiniWeekGrid blocks={blocks} freeBlocks={freeBlocks} />
+                            </div>
+
+                            {freeBlocks.length > 0 && (
+                                <div style={{ marginTop: 12 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6 }}>
+                                        Huecos por día
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                        {["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"].map((dia) => {
+                                            const dayFree = freeBlocks.filter((f) => f.dia === dia);
+                                            if (dayFree.length === 0) return null;
+                                            return (
+                                                <div key={dia} style={{ fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                                                    <b>{dia.charAt(0) + dia.slice(1).toLowerCase()}</b>:{" "}
+                                                    {dayFree.map((f, i) => (
+                                                        <span key={i}>
+                                                            {formatRange(f.startMin, f.endMin)}
+                                                            {i < dayFree.length - 1 ? " · " : ""}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </section>
