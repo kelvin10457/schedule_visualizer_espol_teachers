@@ -6,9 +6,11 @@ import SearchableSelect from "../components/SearchableSelect";
 import { timeToMinutes } from "../lib/time";
 import { CURRENT_SUBJECTS_KEY, SCRAPED_SUBJECTS_KEY } from "../lib/constants";
 import { findProfessorConflicts } from "../lib/conflicts";
+import { tooltipPosition } from "../lib/tooltip";
 
 interface LocationState {
-    file: File;
+    file?: File;
+    profesor?: string;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -121,12 +123,12 @@ interface TooltipInfo {
 export default function Schedule() {
     const navigate = useNavigate();
     const location = useLocation();
-    const state = location.state as LocationState;
+    const state = location.state as LocationState | null;
     const file = state?.file;
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [source, setSource] = useState<"extension" | "file" | null>(null);
-    const [filterProfesor, setFilterProfesor] = useState<string>("ALL");
+    const [source, setSource] = useState<"extension" | "file" | "saved" | null>(null);
+    const [filterProfesor, setFilterProfesor] = useState<string>(state?.profesor ?? "ALL");
     const [filterNivel, setFilterNivel] = useState<string>("ALL");
     const [filterTipo, setFilterTipo] = useState<string>("ALL");
     const [tooltip, setTooltip] = useState<TooltipInfo | null>(null);
@@ -146,7 +148,17 @@ export default function Schedule() {
             }
 
             if (!file) {
-                navigate("/");
+                // Sin archivo nuevo (p. ej. al volver desde Cruces): reusar el último
+                // horario cargado en vez de mandar al usuario a subirlo otra vez.
+                getStorageItem<Subject[]>(CURRENT_SUBJECTS_KEY, []).then((current) => {
+                    if (cancelled) return;
+                    if (current.length === 0) {
+                        navigate("/");
+                        return;
+                    }
+                    setSubjects(current);
+                    setSource("saved");
+                });
                 return;
             }
 
@@ -224,12 +236,25 @@ export default function Schedule() {
         return map;
     }, [filteredSubjects]);
 
-    function handleCellHover(e: React.MouseEvent, s: Subject) {
-        setTooltip({ subject: s, x: e.clientX, y: e.clientY });
+    // Tooltip: con mouse se muestra al pasar por encima; en pantallas táctiles se abre al
+    // tocar una clase y se cierra tocándola de nuevo o tocando fuera.
+    useEffect(() => {
+        if (!tooltip) return;
+        const closeOnOutsideTouch = (e: PointerEvent) => {
+            if (e.pointerType !== "mouse") setTooltip(null);
+        };
+        document.addEventListener("pointerdown", closeOnOutsideTouch);
+        return () => document.removeEventListener("pointerdown", closeOnOutsideTouch);
+    }, [tooltip]);
+
+    function handleCellHover(e: React.PointerEvent, s: Subject) {
+        if (e.pointerType === "mouse") setTooltip({ subject: s, x: e.clientX, y: e.clientY });
     }
 
-    function handleCellLeave() {
-        setTooltip(null);
+    function handleCellTap(e: React.PointerEvent, s: Subject) {
+        if (e.pointerType === "mouse") return;
+        const { clientX, clientY } = e;
+        setTooltip((prev) => (prev?.subject === s ? null : { subject: s, x: clientX, y: clientY }));
     }
 
     // Time labels for left axis — every 30 minutes
@@ -291,7 +316,7 @@ export default function Schedule() {
                             Visualizador de Horarios
                         </h1>
                         <p style={{ margin: 0, fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                            ESPOL · {source === "extension" ? "extraído automáticamente" : file?.name}
+                            ESPOL · {source === "extension" ? "extraído automáticamente" : source === "saved" ? "último horario cargado" : file?.name}
                         </p>
                     </div>
                 </div>
@@ -651,9 +676,14 @@ export default function Schedule() {
                                                 <div
                                                     key={`${s.codigo_materia}-${s.tipo}-${s.paralelo}-${s.dia}-${sIdx}`}
                                                     id={`class-${s.codigo_materia}-${dayKey}-${sIdx}`}
-                                                    onMouseMove={(e) => handleCellHover(e, s)}
-                                                    onMouseLeave={(e) => {
-                                                        handleCellLeave();
+                                                    onPointerMove={(e) => handleCellHover(e, s)}
+                                                    onPointerDown={(e) => {
+                                                        if (e.pointerType !== "mouse") e.stopPropagation();
+                                                    }}
+                                                    onPointerUp={(e) => handleCellTap(e, s)}
+                                                    onPointerLeave={(e) => {
+                                                        if (e.pointerType !== "mouse") return;
+                                                        setTooltip(null);
                                                         const el = e.currentTarget as HTMLElement;
                                                         el.style.transform = "";
                                                         el.style.zIndex = String(10 + col);
@@ -679,7 +709,8 @@ export default function Schedule() {
                                                         transition: "transform 0.15s, box-shadow 0.15s",
                                                         zIndex: 10 + col,
                                                     }}
-                                                    onMouseEnter={(e) => {
+                                                    onPointerEnter={(e) => {
+                                                        if (e.pointerType !== "mouse") return;
                                                         const el = e.currentTarget as HTMLElement;
                                                         el.style.transform = "scale(1.02)";
                                                         el.style.zIndex = "25";
@@ -862,8 +893,7 @@ export default function Schedule() {
                 <div
                     style={{
                         position: "fixed",
-                        top: tooltip.y + 12,
-                        left: tooltip.x + 12,
+                        ...tooltipPosition(tooltip.x, tooltip.y),
                         background: "rgba(15,12,41,0.97)",
                         border: `1px solid ${PROFESSOR_COLORS[professorColorMap[tooltip.subject.profesor] ?? 0].border
                             }`,

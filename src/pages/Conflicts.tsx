@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Subject from "../models/Subject";
-import { getStorageItem } from "../lib/storage";
-import { CURRENT_SUBJECTS_KEY } from "../lib/constants";
+import { getStorageItem, setStorageItem } from "../lib/storage";
+import { CONFLICTS_SELECTION_KEY, CURRENT_SUBJECTS_KEY } from "../lib/constants";
 import {
     buildSections,
     buildSubjectOptions,
@@ -13,10 +13,17 @@ import {
     meetingsOverlap,
     optionsConflict,
     pairwiseFeasibility,
+    type FreeKind,
     type SubjectOption,
 } from "../lib/conflicts";
 import Combobox from "../components/Combobox";
 import MiniWeekGrid, { type WeekBlock } from "../components/MiniWeekGrid";
+
+const FREE_KIND_LEGEND: { kind: FreeKind; label: string; bg: string; border: string }[] = [
+    { kind: "TODAS", label: "Libre todas las semanas", bg: "rgba(16,185,129,0.15)", border: "rgba(16,185,129,0.5)" },
+    { kind: "1", label: "Libre en 1ª quincena", bg: "rgba(245,158,11,0.18)", border: "rgba(245,158,11,0.55)" },
+    { kind: "2", label: "Libre en 2ª quincena", bg: "rgba(168,85,247,0.18)", border: "rgba(168,85,247,0.55)" },
+];
 
 const SUBJECT_COLORS = [
     { bg: "rgba(99,102,241,0.85)", border: "#6366f1" },
@@ -28,6 +35,17 @@ const SUBJECT_COLORS = [
     { bg: "rgba(20,184,166,0.85)", border: "#14b8a6" },
     { bg: "rgba(249,115,22,0.85)", border: "#f97316" },
 ];
+
+interface SavedSelection {
+    nivel: string;
+    picks: Record<string, string>;
+}
+
+// Identificador estable de una opción que sobrevive a recargar el horario (los objetos
+// SubjectOption se reconstruyen en cada carga, así que no se pueden guardar tal cual).
+function optionKey(opt: SubjectOption): string {
+    return `${opt.teoria.tipo}${opt.teoria.paralelo}|${opt.practica?.paralelo ?? ""}`;
+}
 
 function optionLabel(opt: SubjectOption): string {
     const teoriaPart = `Teoría P${opt.teoria.paralelo} — ${opt.teoria.profesor}`;
@@ -57,8 +75,19 @@ export default function Conflicts() {
         | { status: "ready"; combos: SubjectOption[][]; truncated: boolean; index: number }
     >({ status: "idle" });
 
+    const pendingRestore = useRef<SavedSelection | null>(null);
+
     useEffect(() => {
-        getStorageItem<Subject[]>(CURRENT_SUBJECTS_KEY, []).then(setSubjects);
+        Promise.all([
+            getStorageItem<Subject[]>(CURRENT_SUBJECTS_KEY, []),
+            getStorageItem<SavedSelection | null>(CONFLICTS_SELECTION_KEY, null),
+        ]).then(([loaded, saved]) => {
+            setSubjects(loaded);
+            if (saved && loaded.some((s) => s.nivel === saved.nivel)) {
+                pendingRestore.current = saved;
+                setSelectedNivel(saved.nivel);
+            }
+        });
     }, []);
 
     const professorConflicts = useMemo(() => (subjects ? findProfessorConflicts(subjects) : []), [subjects]);
@@ -87,17 +116,30 @@ export default function Conflicts() {
 
     // Al cambiar de nivel, arranca con la primera opción de cada materia y limpia el
     // resultado de la búsqueda automática anterior.
+    // Si hay una selección guardada para este nivel (venimos de recargar la página), se
+    // restaura; los paralelos que ya no existan en el horario actual caen a la primera opción.
     useEffect(() => {
+        const saved = pendingRestore.current?.nivel === selectedNivel ? pendingRestore.current : null;
+        pendingRestore.current = null;
         const initial: Record<string, SubjectOption> = {};
         for (const code of codes) {
             const opts = optionsByCodigo.get(code);
-            if (opts && opts[0]) initial[code] = opts[0];
+            if (!opts || opts.length === 0) continue;
+            const savedKey = saved?.picks[code];
+            initial[code] = (savedKey && opts.find((o) => optionKey(o) === savedKey)) || opts[0];
         }
         setSelection(initial);
         setAutoResult({ status: "idle" });
         setCombosState({ status: "idle" });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedNivel]);
+
+    useEffect(() => {
+        if (!selectedNivel || Object.keys(selection).length === 0) return;
+        const picks: Record<string, string> = {};
+        for (const [code, opt] of Object.entries(selection)) picks[code] = optionKey(opt);
+        setStorageItem<SavedSelection>(CONFLICTS_SELECTION_KEY, { nivel: selectedNivel, picks });
+    }, [selectedNivel, selection]);
 
     function applyCombo(combo: SubjectOption[]) {
         const next: Record<string, SubjectOption> = {};
@@ -200,6 +242,7 @@ export default function Conflicts() {
                     subtitle: m.row.tipo === "TEORIA" ? `Teoría P${m.row.paralelo}` : `Práctica ${m.row.paralelo}`,
                     color,
                     conflicted: conflictedRows.has(m.row),
+                    subject: m.row,
                 });
             });
         });
@@ -265,7 +308,7 @@ export default function Conflicts() {
                 <section style={cardStyle}>
                     <h2 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700 }}>Cruces entre profesores</h2>
                     <p style={{ margin: "0 0 14px", fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-                        Profesores con dos clases distintas que caen en el mismo día y horario.
+                        Profesores con dos clases distintas que caen en el mismo día y horario. Haz clic en un nombre para ver su horario.
                     </p>
 
                     {professorConflicts.length === 0 ? (
@@ -275,7 +318,25 @@ export default function Conflicts() {
                             {professorConflicts.map((group) => (
                                 <div key={group.profesor} style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "10px 14px" }}>
                                     <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, display: "flex", justifyContent: "space-between" }}>
-                                        <span>{group.profesor}</span>
+                                        <button
+                                            onClick={() => navigate("/show-schedule", { state: { profesor: group.profesor } })}
+                                            title="Ver el horario de este profesor"
+                                            style={{
+                                                background: "none",
+                                                border: "none",
+                                                padding: 0,
+                                                color: "#e2e8f0",
+                                                font: "inherit",
+                                                fontWeight: 700,
+                                                textDecoration: "underline",
+                                                textDecorationColor: "rgba(255,255,255,0.35)",
+                                                textUnderlineOffset: 3,
+                                                cursor: "pointer",
+                                                textAlign: "left",
+                                            }}
+                                        >
+                                            {group.profesor} →
+                                        </button>
                                         <span style={{ color: "#fca5a5" }}>{group.conflicts.length} cruce(s)</span>
                                     </div>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -449,11 +510,18 @@ export default function Conflicts() {
                                 })}
                             </div>
 
-                            <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                                <span style={{ width: 12, height: 12, borderRadius: 3, background: "rgba(16,185,129,0.15)", border: "1px dashed rgba(16,185,129,0.5)", flexShrink: 0 }} />
-                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+                            <div style={{ marginTop: 16 }}>
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 8 }}>
                                     Huecos libres del nivel — ningún paralelo de ninguna materia tiene clase ahí, es donde cabría abrir un paralelo nuevo.
-                                </span>
+                                </div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px" }}>
+                                    {FREE_KIND_LEGEND.map(({ kind, label, bg, border }) => (
+                                        <div key={kind} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                            <span style={{ width: 12, height: 12, borderRadius: 3, background: bg, border: `1px dashed ${border}`, flexShrink: 0 }} />
+                                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>{label}</span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                             <div style={{ marginTop: 8 }}>
                                 <MiniWeekGrid blocks={blocks} freeBlocks={freeBlocks} />
@@ -474,6 +542,7 @@ export default function Conflicts() {
                                                     {dayFree.map((f, i) => (
                                                         <span key={i}>
                                                             {formatRange(f.startMin, f.endMin)}
+                                                            {f.freeIn !== "TODAS" ? ` (${f.freeIn}ª quincena)` : ""}
                                                             {i < dayFree.length - 1 ? " · " : ""}
                                                         </span>
                                                     ))}

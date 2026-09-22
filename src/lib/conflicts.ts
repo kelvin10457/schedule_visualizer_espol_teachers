@@ -48,9 +48,9 @@ export interface SubjectPairFeasibility {
     feasible: boolean;
 }
 
-type Quincena = "1" | "2" | "TODAS";
+export type Quincena = "1" | "2" | "TODAS";
 
-function quincenaOf(row: Subject): Quincena {
+export function quincenaOf(row: Subject): Quincena {
     const pq = (row.planificada_quincenalmente || "").trim().toUpperCase();
     if (pq === "1 QUINCENA") return "1";
     if (pq === "2 QUINCENA") return "2";
@@ -315,10 +315,15 @@ export function findAllConflictFreeCombos(
     return { combos, truncated };
 }
 
+// "TODAS": libre todas las semanas. "1"/"2": libre solo en esa quincena (el hueco está
+// ocupado por clases quincenales de la quincena contraria y por eso queda libre en esta).
+export type FreeKind = "TODAS" | "1" | "2";
+
 export interface FreeBlock {
     dia: string;
     startMin: number;
     endMin: number;
+    freeIn: FreeKind;
 }
 
 const ALL_DAY_KEYS = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
@@ -327,30 +332,66 @@ const ALL_DAY_KEYS = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES"];
 // materia, tipo o paralelo). Ahí cabría un paralelo nuevo sin chocar con nada de lo que
 // ya se dicta en ese nivel — útil para detectar dónde abrir cupo cuando la demanda supera
 // la capacidad actual.
+//
+// Respeta la quincena: si un horario solo lo ocupa una clase "1 QUINCENA", en realidad
+// está libre las semanas de la 2ª quincena (y viceversa). Solo se considera "ocupado
+// siempre" cuando hay una clase de todas las semanas ahí, o cuando conviven clases de
+// ambas quincenas (entre las dos cubren el semestre completo).
 export function computeFreeBlocks(sections: Section[], gridStart = 7 * 60, gridEnd = 22 * 60): FreeBlock[] {
-    const byDay = new Map<string, { start: number; end: number }[]>();
+    const byDay = new Map<string, { start: number; end: number; kind: Quincena }[]>();
     for (const key of ALL_DAY_KEYS) byDay.set(key, []);
     for (const sec of sections) {
         for (const m of sec.meetings) {
             if (!byDay.has(m.dia)) continue;
-            byDay.get(m.dia)!.push({ start: m.startMin, end: m.endMin });
+            byDay.get(m.dia)!.push({ start: m.startMin, end: m.endMin, kind: quincenaOf(m.row) });
         }
     }
 
     const result: FreeBlock[] = [];
     for (const dia of ALL_DAY_KEYS) {
-        const intervals = byDay.get(dia)!.sort((a, b) => a.start - b.start);
-        let cursor = gridStart;
-        for (const { start, end } of intervals) {
-            const clampedStart = Math.max(start, gridStart);
-            const clampedEnd = Math.min(end, gridEnd);
-            if (clampedStart > cursor) {
-                result.push({ dia, startMin: cursor, endMin: clampedStart });
-            }
-            cursor = Math.max(cursor, clampedEnd);
+        const intervals = byDay.get(dia)!;
+
+        const points = new Set<number>([gridStart, gridEnd]);
+        for (const iv of intervals) {
+            points.add(Math.min(Math.max(iv.start, gridStart), gridEnd));
+            points.add(Math.min(Math.max(iv.end, gridStart), gridEnd));
         }
-        if (cursor < gridEnd) {
-            result.push({ dia, startMin: cursor, endMin: gridEnd });
+        const bounds = Array.from(points).sort((a, b) => a - b);
+
+        let openStart: number | null = null;
+        let openKind: FreeKind | null = null;
+
+        for (let i = 0; i < bounds.length - 1; i++) {
+            const segStart = bounds[i];
+            const segEnd = bounds[i + 1];
+            if (segStart >= segEnd) continue;
+            const mid = (segStart + segEnd) / 2;
+
+            let hasTodas = false;
+            let has1 = false;
+            let has2 = false;
+            for (const iv of intervals) {
+                if (iv.start < mid && mid < iv.end) {
+                    if (iv.kind === "TODAS") hasTodas = true;
+                    else if (iv.kind === "1") has1 = true;
+                    else has2 = true;
+                }
+            }
+
+            const segFreeIn: FreeKind | null = hasTodas || (has1 && has2) ? null : has1 ? "2" : has2 ? "1" : "TODAS";
+
+            if (segFreeIn === openKind && openStart !== null) {
+                continue; // se extiende el bloque abierto, solo se ajusta el fin al cerrar
+            }
+            if (openKind !== null && openStart !== null) {
+                result.push({ dia, startMin: openStart, endMin: segStart, freeIn: openKind });
+            }
+            openStart = segFreeIn === null ? null : segStart;
+            openKind = segFreeIn;
+        }
+
+        if (openKind !== null && openStart !== null) {
+            result.push({ dia, startMin: openStart, endMin: gridEnd, freeIn: openKind });
         }
     }
     return result;
